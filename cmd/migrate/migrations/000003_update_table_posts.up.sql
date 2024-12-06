@@ -1,0 +1,7 @@
+ALTER TABLE POSTS
+    ADD CONSTRAINT FK_USER FOREIGN KEY (
+        USER_ID
+    )
+        REFERENCES USERS(
+            ID
+        )

@@ -1,0 +1,15 @@
+ALTER TABLE COMMENTS
+    ADD CONSTRAINT FK_POSTS FOREIGN KEY (
+        POST_ID
+    )
+        REFERENCES POSTS(
+            ID
+        );
+
+ALTER TABLE COMMENTS
+    ADD CONSTRAINT FK_USER FOREIGN KEY (
+        USER_ID
+    )
+        REFERENCES USERS(
+            ID
+        );

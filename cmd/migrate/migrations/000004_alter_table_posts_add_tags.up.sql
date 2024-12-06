@@ -1,0 +1,4 @@
+ALTER TABLE POSTS
+    ADD COLUMN TAGS VARCHAR(
+        150
+    );
