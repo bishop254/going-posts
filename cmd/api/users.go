@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/bishop254/bursary/internal/mailer"
 	"github.com/bishop254/bursary/internal/store"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -59,7 +60,22 @@ func (a *application) createUserHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	//send email to the user
+	tmplVars := struct {
+		Username string
+		Link     string
+	}{
+		Username: user.Username,
+		Link:     "htpp://lashkjsa",
+	}
+
+	err := a.mailer.Send(mailer.UserWelcomeTemplate, user.Username, user.Email, tmplVars)
+	if err != nil {
+		if err := a.store.Users.RollBackNewUser(ctx, user.ID, hashToken); err != nil {
+			a.internalServerError(w, r, err)
+		}
+		a.internalServerError(w, r, err)
+		return
+	}
 
 	if err := jsonResponse(w, http.StatusCreated, user); err != nil {
 		a.internalServerError(w, r, err)

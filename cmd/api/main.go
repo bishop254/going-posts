@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/bishop254/bursary/internal/db"
+	"github.com/bishop254/bursary/internal/mailer"
 	"github.com/bishop254/bursary/internal/store"
 	"go.uber.org/zap"
 )
@@ -22,7 +23,17 @@ func main() {
 		},
 		env: goDotEnvVariable("ENV_MODE"),
 		mail: mailConfig{
-			tokenExp: time.Hour * 24 * 3,
+			tokenExp:  time.Hour * 24 * 3,
+			fromEmail: goDotEnvVariable("FROM_EMAIL"),
+			sendGrid: sendGridConfig{
+				apiKey: goDotEnvVariable("SENDGRID_API_KEY"),
+			},
+		},
+		auth: authConfig{
+			basicAuth: basicAuthConfig{
+				username: goDotEnvVariable("BASIC_USERNAME"),
+				password: goDotEnvVariable("BASIC_PASSWORD"),
+			},
 		},
 	}
 
@@ -42,11 +53,14 @@ func main() {
 	defer db.Close()
 	logger.Info("DB connection established")
 
+	mailer := mailer.NewSendGrid(cfg.mail.sendGrid.apiKey, cfg.mail.fromEmail)
+
 	store := store.NewStorage(db)
 	app := &application{
 		config: cfg,
 		store:  store,
 		logger: logger,
+		mailer: mailer,
 	}
 
 	mux := app.mount()

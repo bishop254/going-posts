@@ -21,6 +21,7 @@ type Storage struct {
 		UnfollowUser(context.Context, int64, int64) error
 		CreateAndInvite(context.Context, *User, string, time.Duration) error
 		Activate(context.Context, string) error
+		RollBackNewUser(context.Context, int64, string) error
 	}
 	Comments interface {
 		Create(context.Context, *Comment) error

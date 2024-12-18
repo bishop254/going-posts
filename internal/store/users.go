@@ -74,7 +74,6 @@ func (s *UserStore) Create(ctx context.Context, tx *sql.Tx, user *User) error {
 
 	return nil
 }
-
 func (s *UserStore) GetOne(ctx context.Context, id int64) (*User, error) {
 	query := `
 		SELECT id, email, username, blocked, created_at, updated_at FROM users WHERE id = $1 
@@ -103,7 +102,6 @@ func (s *UserStore) GetOne(ctx context.Context, id int64) (*User, error) {
 
 	return &user, nil
 }
-
 func (s *UserStore) FollowUser(ctx context.Context, userId int64, followerId int64) error {
 	query := `
 		INSERT INTO followers(user_id, follower_id) VALUES($1, $2) RETURNING created_at
@@ -296,6 +294,48 @@ func (s *UserStore) deleteInvite(ctx context.Context, tx *sql.Tx, token string, 
 
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (s *UserStore) RollBackNewUser(ctx context.Context, id int64, token string) error {
+	return withTx(s.db, ctx, func(tx *sql.Tx) error {
+		err := s.deleteUser(ctx, tx, id)
+		if err != nil {
+			return err
+		}
+
+		err = s.deleteInvite(ctx, tx, token, id)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+}
+
+func (s *UserStore) deleteUser(ctx context.Context, tx *sql.Tx, id int64) error {
+	query := `
+		DELETE FROM users WHERE id = $1;
+	`
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second*3)
+	defer cancel()
+
+	res, err := tx.ExecContext(
+		ctx,
+		query,
+		id,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	rows, _ := res.RowsAffected()
+	if rows == 0 {
+		return errors.New("No user found with given ID")
 	}
 
 	return nil

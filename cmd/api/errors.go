@@ -16,3 +16,8 @@ func (a *application) notFoundError(w http.ResponseWriter, r *http.Request, err 
 	a.logger.Errorw("resource not found error", "method", r.Method, "path", r.URL.Path, "err", err.Error())
 	writeJSONError(w, http.StatusNotFound, err.Error())
 }
+
+func (a *application) unauthorizedError(w http.ResponseWriter, r *http.Request, err error) {
+	a.logger.Errorw("unauthorized error", "method", r.Method, "path", r.URL.Path, "err", err.Error())
+	writeJSONError(w, http.StatusUnauthorized, err.Error())
+}

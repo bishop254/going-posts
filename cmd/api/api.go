@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/bishop254/bursary/internal/mailer"
 	"github.com/bishop254/bursary/internal/store"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -15,6 +16,7 @@ type application struct {
 	config config
 	store  store.Storage
 	logger *zap.SugaredLogger
+	mailer mailer.Client
 }
 
 type config struct {
@@ -22,6 +24,16 @@ type config struct {
 	db   dbConfig
 	env  string
 	mail mailConfig
+	auth authConfig
+}
+
+type authConfig struct {
+	basicAuth basicAuthConfig
+}
+
+type basicAuthConfig struct {
+	username string
+	password string
 }
 
 type dbConfig struct {
@@ -32,7 +44,13 @@ type dbConfig struct {
 }
 
 type mailConfig struct {
-	tokenExp time.Duration
+	tokenExp  time.Duration
+	fromEmail string
+	sendGrid  sendGridConfig
+}
+
+type sendGridConfig struct {
+	apiKey string
 }
 
 func (a *application) mount() http.Handler {
@@ -46,7 +64,7 @@ func (a *application) mount() http.Handler {
 	r.Use(middleware.Timeout(time.Minute))
 
 	r.Route("/v1", func(r chi.Router) {
-		r.Get("/health", a.healthCheckHandler)
+		r.With(a.BasicAuthMiddleware()).Get("/health", a.healthCheckHandler)
 
 		r.Route("/posts", func(r chi.Router) {
 			r.Post("/", a.createPostHandler)
@@ -79,7 +97,6 @@ func (a *application) mount() http.Handler {
 
 		r.Route("/auth", func(r chi.Router) {
 			r.Post("/user", a.createUserHandler)
-			r.Post("/activate", a.createUserHandler)
 		})
 	})
 
