@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"errors"
 	"net/http"
 	"strconv"
@@ -32,13 +31,13 @@ func (a *application) createPostHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	userId := 1
+	user := getUserFromCtx(r)
 
 	post := &store.Post{
 		Title:   payload.Title,
 		Content: payload.Content,
 		Tags:    payload.Tags,
-		UserID:  int64(userId),
+		UserID:  int64(user.ID),
 	}
 
 	ctx := r.Context()
@@ -57,7 +56,6 @@ func (a *application) createPostHandler(w http.ResponseWriter, r *http.Request) 
 type CreatePostCommentPayload struct {
 	Content string `json:"content" validate:"required,max=1000"`
 	PostID  int64  `json:"post_id" validate:"required"`
-	UserID  int64  `json:"user_id" validate:"required"`
 }
 
 func (a *application) createPostCommentHandler(w http.ResponseWriter, r *http.Request) {
@@ -72,10 +70,12 @@ func (a *application) createPostCommentHandler(w http.ResponseWriter, r *http.Re
 		return
 	}
 
+	user := getUserFromCtx(r)
+
 	comment := &store.Comment{
 		Content: payload.Content,
 		PostID:  payload.PostID,
-		UserID:  payload.UserID,
+		UserID:  int64(user.ID),
 	}
 
 	ctx := r.Context()
@@ -187,34 +187,6 @@ func (a *application) updatePostHandler(w http.ResponseWriter, r *http.Request) 
 		a.internalServerError(w, r, err)
 		return
 	}
-}
-
-func (a *application) postContextMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-
-		idParam := chi.URLParam(r, "postId")
-		postId, err := strconv.ParseInt(idParam, 10, 64)
-		if err != nil {
-			a.internalServerError(w, r, err)
-			return
-		}
-
-		post, err := a.store.Posts.GetOne(ctx, postId)
-		if err != nil {
-			switch {
-			case errors.Is(err, errors.New("post not found")):
-				a.notFoundError(w, r, err)
-				return
-			default:
-				a.internalServerError(w, r, err)
-				return
-			}
-		}
-
-		ctx = context.WithValue(ctx, postCtx, post)
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
 }
 
 func getPostFromCtx(r *http.Request) *store.Post {

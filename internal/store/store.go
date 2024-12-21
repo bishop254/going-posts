@@ -17,11 +17,17 @@ type Storage struct {
 	Users interface {
 		Create(context.Context, *sql.Tx, *User) error
 		GetOne(context.Context, int64) (*User, error)
+		GetOneByEmail(context.Context, string) (*User, error)
 		FollowUser(context.Context, int64, int64) error
 		UnfollowUser(context.Context, int64, int64) error
 		CreateAndInvite(context.Context, *User, string, time.Duration) error
 		Activate(context.Context, string) error
 		RollBackNewUser(context.Context, int64, string) error
+	}
+	Roles interface {
+		// Create(context.Context, *sql.Tx, *User) error
+		GetOneByName(context.Context, string) (*Role, error)
+		GetAllAboveLevel(context.Context, int64) ([]Role, error)
 	}
 	Comments interface {
 		Create(context.Context, *Comment) error
@@ -34,6 +40,7 @@ func NewStorage(db *sql.DB) Storage {
 		Posts:    &PostStore{db},
 		Users:    &UserStore{db},
 		Comments: &CommentStore{db},
+		Roles:    &RolesStore{db},
 	}
 }
 

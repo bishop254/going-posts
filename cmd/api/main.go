@@ -3,6 +3,7 @@ package main
 import (
 	"time"
 
+	"github.com/bishop254/bursary/internal/auth"
 	"github.com/bishop254/bursary/internal/db"
 	"github.com/bishop254/bursary/internal/mailer"
 	"github.com/bishop254/bursary/internal/store"
@@ -34,6 +35,10 @@ func main() {
 				username: goDotEnvVariable("BASIC_USERNAME"),
 				password: goDotEnvVariable("BASIC_PASSWORD"),
 			},
+			jwtAuth: jwtConfig{
+				secret: goDotEnvVariable("JWT_SECRET"),
+				exp:    time.Hour * 1,
+			},
 		},
 	}
 
@@ -54,13 +59,15 @@ func main() {
 	logger.Info("DB connection established")
 
 	mailer := mailer.NewSendGrid(cfg.mail.sendGrid.apiKey, cfg.mail.fromEmail)
+	jwtAuthenticator := auth.NewJWTAuthenticator(cfg.auth.jwtAuth.secret, "kcg", "kcg")
 
 	store := store.NewStorage(db)
 	app := &application{
-		config: cfg,
-		store:  store,
-		logger: logger,
-		mailer: mailer,
+		config:        cfg,
+		store:         store,
+		logger:        logger,
+		mailer:        mailer,
+		authenticator: &jwtAuthenticator,
 	}
 
 	mux := app.mount()

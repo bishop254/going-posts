@@ -1,18 +1,17 @@
 package main
 
 import (
-	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/bishop254/bursary/internal/mailer"
 	"github.com/bishop254/bursary/internal/store"
 	"github.com/go-chi/chi/v5"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	// "github.com/gooogle/uuid"
 )
@@ -20,6 +19,7 @@ import (
 type userKey string
 
 const userCtx userKey = "user"
+const userParamCtx userKey = "user_param"
 
 type CreateUserPayload struct {
 	Username string `json:"username" validate:"required"`
@@ -83,41 +83,17 @@ func (a *application) createUserHandler(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-func (a *application) userContextMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-
-		idParam := chi.URLParam(r, "userId")
-		userId, err := strconv.ParseInt(idParam, 10, 64)
-		if err != nil {
-			a.internalServerError(w, r, err)
-			return
-		}
-
-		user, err := a.store.Users.GetOne(ctx, userId)
-		if err != nil {
-			switch {
-			case errors.Is(err, errors.New("user not found")):
-				a.notFoundError(w, r, err)
-				return
-			default:
-				a.internalServerError(w, r, err)
-				return
-			}
-		}
-
-		ctx = context.WithValue(ctx, userCtx, user)
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
-}
-
 func getUserFromCtx(r *http.Request) *store.User {
 	user, _ := r.Context().Value(userCtx).(*store.User)
 	return user
 }
+func getUserFromParamCtx(r *http.Request) *store.User {
+	user, _ := r.Context().Value(userParamCtx).(*store.User)
+	return user
+}
 
 func (a *application) getOneUserHandler(w http.ResponseWriter, r *http.Request) {
-	user := getUserFromCtx(r)
+	user := getUserFromParamCtx(r)
 
 	if err := jsonResponse(w, http.StatusOK, user); err != nil {
 		a.internalServerError(w, r, err)
@@ -125,31 +101,20 @@ func (a *application) getOneUserHandler(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-type FollowUserPayload struct {
-	FollowerID int64 `json:"follower_id" validate:"required"`
-}
+// type FollowUserPayload struct {
+// 	FollowerID int64 `json:"follower_id" validate:"required"`
+// }
 
 func (a *application) followUserHandler(w http.ResponseWriter, r *http.Request) {
 	user := getUserFromCtx(r)
+	followedUser := getUserFromParamCtx(r)
 
-	var payload FollowUserPayload
-	if err := readJSON(w, r, &payload); err != nil {
-		a.badRequestError(w, r, err)
-		return
-	}
-
-	if err := Validate.Struct(payload); err != nil {
-		a.badRequestError(w, r, err)
-		return
-	}
-
-	if payload.FollowerID == user.ID {
+	if followedUser.ID == user.ID {
 		a.badRequestError(w, r, errors.New("cannot perform operation"))
 		return
 	}
 
-	if err := a.store.Users.FollowUser(r.Context(), user.ID, payload.FollowerID); err != nil {
-		fmt.Println(err)
+	if err := a.store.Users.FollowUser(r.Context(), followedUser.ID, user.ID); err != nil {
 		a.internalServerError(w, r, err)
 		return
 	}
@@ -162,24 +127,9 @@ func (a *application) followUserHandler(w http.ResponseWriter, r *http.Request) 
 
 func (a *application) unfollowUserHandler(w http.ResponseWriter, r *http.Request) {
 	user := getUserFromCtx(r)
+	unfollowedUser := getUserFromParamCtx(r)
 
-	var payload FollowUserPayload
-	if err := readJSON(w, r, &payload); err != nil {
-		a.badRequestError(w, r, err)
-		return
-	}
-
-	if err := Validate.Struct(payload); err != nil {
-		a.badRequestError(w, r, err)
-		return
-	}
-
-	if payload.FollowerID == user.ID {
-		a.badRequestError(w, r, errors.New("cannot perform operation"))
-		return
-	}
-
-	if err := a.store.Users.UnfollowUser(r.Context(), user.ID, payload.FollowerID); err != nil {
+	if err := a.store.Users.UnfollowUser(r.Context(), unfollowedUser.ID, user.ID); err != nil {
 		fmt.Println(err)
 		a.internalServerError(w, r, err)
 		return
@@ -202,6 +152,73 @@ func (a *application) activateUserHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	if err := jsonResponse(w, http.StatusNoContent, ""); err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+}
+
+type LoginUserPayload struct {
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required,min=3,max=71"`
+}
+
+func (a *application) loginUserHandler(w http.ResponseWriter, r *http.Request) {
+	var payload LoginUserPayload
+	if err := readJSON(w, r, &payload); err != nil {
+		a.badRequestError(w, r, err)
+		return
+	}
+
+	if err := Validate.Struct(payload); err != nil {
+		a.badRequestError(w, r, err)
+		return
+	}
+
+	ctx := r.Context()
+
+	user, err := a.store.Users.GetOneByEmail(ctx, payload.Email)
+	if err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+
+	if err := user.Password.CompareWithHash(payload.Password); err != nil {
+		a.unauthorizedError(w, r, errors.New("invalid username/password"))
+		return
+	}
+
+	claims := jwt.MapClaims{
+		"sub":   user.ID,
+		"email": user.Email,
+		"iss":   "kcg",
+		"aud":   "kcg",
+		"exp":   time.Now().Add(a.config.auth.jwtAuth.exp).Unix(),
+		"nbf":   time.Now().Unix(),
+		"iat":   time.Now().Unix(),
+		"jti":   uuid.New().String(),
+	}
+
+	token, err := a.authenticator.GenerateToken(claims)
+	if err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+
+	loginResp := struct {
+		Token     string `json:"token"`
+		Username  string `json:"username"`
+		Email     string `json:"email"`
+		Blocked   bool   `json:"blocked"`
+		CreatedAt string `json:"created_at"`
+	}{
+		Token:     token,
+		Username:  user.Username,
+		Email:     user.Email,
+		Blocked:   user.Blocked,
+		CreatedAt: user.CreatedAt,
+	}
+
+	if err := jsonResponse(w, http.StatusOK, loginResp); err != nil {
 		a.internalServerError(w, r, err)
 		return
 	}

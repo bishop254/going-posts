@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/bishop254/bursary/internal/auth"
 	"github.com/bishop254/bursary/internal/mailer"
 	"github.com/bishop254/bursary/internal/store"
 	"github.com/go-chi/chi/v5"
@@ -13,10 +14,11 @@ import (
 
 // Create a struct for our server configurations
 type application struct {
-	config config
-	store  store.Storage
-	logger *zap.SugaredLogger
-	mailer mailer.Client
+	config        config
+	store         store.Storage
+	logger        *zap.SugaredLogger
+	mailer        mailer.Client
+	authenticator auth.Authenticator
 }
 
 type config struct {
@@ -29,6 +31,12 @@ type config struct {
 
 type authConfig struct {
 	basicAuth basicAuthConfig
+	jwtAuth   jwtConfig
+}
+
+type jwtConfig struct {
+	secret string
+	exp    time.Duration
 }
 
 type basicAuthConfig struct {
@@ -67,14 +75,15 @@ func (a *application) mount() http.Handler {
 		r.With(a.BasicAuthMiddleware()).Get("/health", a.healthCheckHandler)
 
 		r.Route("/posts", func(r chi.Router) {
+			r.Use(a.JWTAuthMiddleware())
 			r.Post("/", a.createPostHandler)
 			r.Post("/comment", a.createPostCommentHandler)
 
 			r.Route("/{postId}", func(r chi.Router) {
 				r.Use(a.postContextMiddleware)
 				r.Get("/", a.getOnePostHandler)
-				r.Delete("/", a.deletePostHandler)
-				r.Patch("/", a.updatePostHandler)
+				r.Delete("/", a.AuthorizationCheck("admin", a.deletePostHandler))
+				r.Patch("/", a.AuthorizationCheck("moderator", a.updatePostHandler))
 			})
 		})
 
@@ -84,6 +93,7 @@ func (a *application) mount() http.Handler {
 			})
 
 			r.Route("/{userId}", func(r chi.Router) {
+				r.Use(a.JWTAuthMiddleware())
 				r.Use(a.userContextMiddleware)
 				r.Get("/", a.getOneUserHandler)
 				r.Put("/follow", a.followUserHandler)
@@ -91,12 +101,14 @@ func (a *application) mount() http.Handler {
 			})
 
 			r.Group(func(r chi.Router) {
+				r.Use(a.JWTAuthMiddleware())
 				r.Get("/feed", a.getUserFeedHandler)
 			})
 		})
 
 		r.Route("/auth", func(r chi.Router) {
 			r.Post("/user", a.createUserHandler)
+			r.With(a.BasicAuthMiddleware()).Post("/login", a.loginUserHandler)
 		})
 	})
 

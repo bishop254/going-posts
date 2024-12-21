@@ -19,6 +19,7 @@ type User struct {
 	FirstTimeLogin bool     `json: "first_time_login"`
 	CreatedAt      string   `json: "created_at"`
 	UpdatedAt      string   `json: "updated_at"`
+	Role           Role     `json:"role"`
 }
 
 type Invitation struct {
@@ -40,6 +41,14 @@ func (p *password) Hashing(text string) error {
 
 	p.text = &text
 	p.hash = hash
+
+	return nil
+}
+
+func (p *password) CompareWithHash(text string) error {
+	if err := bcrypt.CompareHashAndPassword(p.hash, []byte(text)); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -76,18 +85,50 @@ func (s *UserStore) Create(ctx context.Context, tx *sql.Tx, user *User) error {
 }
 func (s *UserStore) GetOne(ctx context.Context, id int64) (*User, error) {
 	query := `
-		SELECT id, email, username, blocked, created_at, updated_at FROM users WHERE id = $1 
+		SELECT users.id, email, username, blocked, created_at, updated_at, roles.id, roles.name, roles.level FROM users
+		JOIN roles ON (roles.id = users.role_id) 
+		WHERE users.id = $1; 
 	`
 
 	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
 	defer cancel()
 
-	var user User
-
+	user := &User{}
 	if err := s.db.QueryRowContext(ctx, query, id).Scan(
 		&user.ID,
 		&user.Email,
 		&user.Username,
+		&user.Blocked,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+		&user.Role.ID,
+		&user.Role.Name,
+		&user.Role.Level,
+	); err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return nil, errors.New("user not found")
+		default:
+			return nil, err
+		}
+	}
+
+	return user, nil
+}
+func (s *UserStore) GetOneByEmail(ctx context.Context, email string) (*User, error) {
+	query := `
+		SELECT id, email, username, password, blocked, created_at, updated_at FROM users WHERE email = $1 
+	`
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
+	defer cancel()
+
+	user := &User{}
+	if err := s.db.QueryRowContext(ctx, query, email).Scan(
+		&user.ID,
+		&user.Email,
+		&user.Username,
+		&user.Password.hash,
 		&user.Blocked,
 		&user.CreatedAt,
 		&user.UpdatedAt,
@@ -100,7 +141,7 @@ func (s *UserStore) GetOne(ctx context.Context, id int64) (*User, error) {
 		}
 	}
 
-	return &user, nil
+	return user, nil
 }
 func (s *UserStore) FollowUser(ctx context.Context, userId int64, followerId int64) error {
 	query := `
