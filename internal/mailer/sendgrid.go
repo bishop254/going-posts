@@ -55,19 +55,16 @@ func (m *SendGridMailer) Send(templateFile, username, email string, data any) er
 	for i := 0; i < maxRetries; i++ {
 		response, err := m.client.Send(message)
 		if err != nil {
-			fmt.Println(err)
 			time.Sleep(time.Second * time.Duration(i+1))
 			continue
 		}
 
-		if response.StatusCode != 200 {
-			fmt.Println(response.Body)
+		if response.StatusCode != 200 && response.StatusCode != 202 {
+
 			time.Sleep(time.Second * time.Duration(i+1))
 			continue
 		}
 
-		fmt.Println(i)
-		fmt.Println(response.StatusCode)
 		fmt.Println("Email sent")
 		return nil
 	}

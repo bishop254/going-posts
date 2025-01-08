@@ -68,6 +68,7 @@ func (a *application) mount() http.Handler {
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Logger)
+	r.Use(a.CorsMiddleware)
 
 	r.Use(middleware.Timeout(time.Minute))
 
@@ -109,6 +110,26 @@ func (a *application) mount() http.Handler {
 		r.Route("/auth", func(r chi.Router) {
 			r.Post("/user", a.createUserHandler)
 			r.With(a.BasicAuthMiddleware()).Post("/login", a.loginUserHandler)
+		})
+	})
+
+	r.Route("/v8", func(r chi.Router) {
+		r.Route("/auth", func(r chi.Router) {
+			r.Post("/register", a.registerStudentHandler)
+			r.With(a.BasicAuthMiddleware()).Post("/login", a.loginStudentHandler)
+		})
+
+		r.Route("/students", func(r chi.Router) {
+			r.Route("/activate/{token}", func(r chi.Router) {
+				r.Get("/", a.activateStudentHandler)
+			})
+
+			r.Route("/{studentId}", func(r chi.Router) {
+				r.Use(a.JWTStudentAuthMiddleware())
+				r.Get("/personal", a.getStudentPersonalHandler)
+				r.Post("/personal", a.createStudentPersonalHandler)
+				r.Put("/personal", a.updateStudentPersonalHandler)
+			})
 		})
 	})
 

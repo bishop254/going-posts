@@ -33,6 +33,16 @@ type Storage struct {
 		Create(context.Context, *Comment) error
 		GetPostWithCommentsByID(context.Context, int64) ([]Comment, error)
 	}
+	Students interface {
+		RegisterAndInvite(context.Context, *Student, string, time.Duration) error
+		RollBackNewStudent(context.Context, int64, string) error
+		Activate(context.Context, string) error
+		GetOneByEmail(context.Context, string) (*Student, error)
+		GetOneByID(context.Context, int64) (*Student, error)
+		GetStudentPersonalByID(context.Context, int64) (*StudentPersonal, error)
+		CreateStudentPersonal(context.Context, StudentPersonal, int64) error
+		UpdateStudentPersonal(context.Context, StudentPersonal, int64) error
+	}
 }
 
 func NewStorage(db *sql.DB) Storage {
@@ -41,6 +51,7 @@ func NewStorage(db *sql.DB) Storage {
 		Users:    &UserStore{db},
 		Comments: &CommentStore{db},
 		Roles:    &RolesStore{db},
+		Students: &StudentsStore{db},
 	}
 }
 

@@ -61,6 +61,53 @@ func (a *application) JWTAuthMiddleware() func(http.Handler) http.Handler {
 	}
 }
 
+func (a *application) JWTStudentAuthMiddleware() func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			authHeader := r.Header.Get("Authorization")
+
+			if authHeader == "" {
+				a.unauthorizedError(w, r, errors.New("authorization header missing"))
+				return
+			}
+
+			authHeaderSlice := strings.Split(authHeader, " ")
+			if len(authHeaderSlice) != 2 || authHeaderSlice[0] != "Bearer" {
+				a.unauthorizedError(w, r, errors.New("authorization header malformed"))
+				return
+			}
+
+			token := authHeaderSlice[1]
+
+			tokenString, err := a.authenticator.ValidateToken(token)
+			if err != nil {
+				a.unauthorizedError(w, r, err)
+				return
+			}
+
+			claims, _ := tokenString.Claims.(jwt.MapClaims)
+			studentId, err := strconv.ParseInt(fmt.Sprintf("%.f", claims["sub"]), 10, 64)
+			if err != nil {
+				a.unauthorizedError(w, r, err)
+				return
+			}
+
+			ctx := r.Context()
+
+			student, err := a.store.Students.GetOneByID(ctx, studentId)
+			if err != nil {
+				a.unauthorizedError(w, r, err)
+				return
+			}
+
+			ctx = context.WithValue(ctx, studentCtx, student)
+
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+
+	}
+}
+
 func (a *application) BasicAuthMiddleware() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -188,6 +235,24 @@ func (a *application) postContextMiddleware(next http.Handler) http.Handler {
 		}
 
 		ctx = context.WithValue(ctx, postCtx, post)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func (a *application) CorsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
+		w.Header().Add("Access-Control-Allow-Origin", "*")
+		w.Header().Add("Access-Control-Allow-Credentials", "true")
+		w.Header().Add("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
+		w.Header().Add("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+
+		if r.Method == "OPTIONS" {
+			http.Error(w, "No Content", http.StatusNoContent)
+			return
+		}
+
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

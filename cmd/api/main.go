@@ -59,7 +59,7 @@ func main() {
 	logger.Info("DB connection established")
 
 	mailer := mailer.NewSendGrid(cfg.mail.sendGrid.apiKey, cfg.mail.fromEmail)
-	jwtAuthenticator := auth.NewJWTAuthenticator(cfg.auth.jwtAuth.secret, "kcg", "kcg")
+	jwtAuthenticator := auth.NewJWTAuthenticator(cfg.auth.jwtAuth.secret, "migBurs", "migBurs")
 
 	store := store.NewStorage(db)
 	app := &application{

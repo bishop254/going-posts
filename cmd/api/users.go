@@ -19,6 +19,7 @@ import (
 type userKey string
 
 const userCtx userKey = "user"
+const studentCtx userKey = "student"
 const userParamCtx userKey = "user_param"
 
 type CreateUserPayload struct {
@@ -87,6 +88,7 @@ func getUserFromCtx(r *http.Request) *store.User {
 	user, _ := r.Context().Value(userCtx).(*store.User)
 	return user
 }
+
 func getUserFromParamCtx(r *http.Request) *store.User {
 	user, _ := r.Context().Value(userParamCtx).(*store.User)
 	return user
@@ -163,7 +165,7 @@ type LoginUserPayload struct {
 }
 
 func (a *application) loginUserHandler(w http.ResponseWriter, r *http.Request) {
-	var payload LoginUserPayload
+	var payload LoginStudentPayload
 	if err := readJSON(w, r, &payload); err != nil {
 		a.badRequestError(w, r, err)
 		return

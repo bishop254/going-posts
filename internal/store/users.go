@@ -83,6 +83,7 @@ func (s *UserStore) Create(ctx context.Context, tx *sql.Tx, user *User) error {
 
 	return nil
 }
+
 func (s *UserStore) GetOne(ctx context.Context, id int64) (*User, error) {
 	query := `
 		SELECT users.id, email, username, blocked, created_at, updated_at, roles.id, roles.name, roles.level FROM users
@@ -115,6 +116,7 @@ func (s *UserStore) GetOne(ctx context.Context, id int64) (*User, error) {
 
 	return user, nil
 }
+
 func (s *UserStore) GetOneByEmail(ctx context.Context, email string) (*User, error) {
 	query := `
 		SELECT id, email, username, password, blocked, created_at, updated_at FROM users WHERE email = $1 
@@ -143,6 +145,7 @@ func (s *UserStore) GetOneByEmail(ctx context.Context, email string) (*User, err
 
 	return user, nil
 }
+
 func (s *UserStore) FollowUser(ctx context.Context, userId int64, followerId int64) error {
 	query := `
 		INSERT INTO followers(user_id, follower_id) VALUES($1, $2) RETURNING created_at
@@ -173,6 +176,7 @@ func (s *UserStore) FollowUser(ctx context.Context, userId int64, followerId int
 
 	return nil
 }
+
 func (s *UserStore) UnfollowUser(ctx context.Context, userId int64, followerId int64) error {
 	query := `
 		DELETE FROM followers
