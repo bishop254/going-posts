@@ -22,6 +22,7 @@ type Student struct {
 	UpdatedAt      string   `json: "updated_at"`
 	Role           Role     `json:"role"`
 	Personal       StudentPersonal
+	Institution    StudentInstitution
 }
 
 type StudentPersonal struct {
@@ -41,10 +42,32 @@ type StudentPersonal struct {
 	IDNumber         *int64 `json:"id_number,omitempty"`
 	Phone            int64  `json:"phone"`
 	KraPinNo         string `json:"kra_pin_no,omitempty"`
-	PassportNo       *int64 `json:"passport_no,omitempty"`
+	PassportNo       string `json:"passport_no,omitempty"`
 	SpecialNeed      bool   `json:"special_need"`
 	SpecialNeedsType string `json:"special_needs_type"`
 	StudentID        int64  `json:"student_id"`
+}
+
+type StudentInstitution struct {
+	ID             int64  `json:"id"`
+	InstName       string `json:"inst_name"`
+	InstType       string `json:"inst_type"`
+	Category       string `json:"category,omitempty"`
+	Telephone      int64  `json:"telephone"`
+	Email          string `json:"email,omitempty"`
+	Address        string `json:"address"`
+	InstCounty     string `json:"inst_county"`
+	InstSubCounty  string `json:"inst_sub_county"`
+	InstWard       string `json:"inst_ward,omitempty"`
+	PrincipalName  string `json:"principal_name"`
+	YearJoined     int64  `json:"year_joined"`
+	CurrClassLevel string `json:"curr_class_level"`
+	AdmNo          string `json:"adm_no"`
+	StudentID      int64  `json:"student_id"`
+	BankName       string `json:"bank_name"`
+	BankBranch     string `json:"bank_branch"`
+	BankAccName    string `json:"bank_acc_name"`
+	BankAccNo      int64  `json:"bank_acc_no"`
 }
 
 type StudentInvitation struct {
@@ -409,7 +432,7 @@ func (s *StudentsStore) CreateStudentPersonal(ctx context.Context, payload Stude
 		payload.IDNumber,
 		payload.Phone,
 		payload.KraPinNo,
-		payload.PassportNo,
+		0, // payload.PassportNo,
 		payload.SpecialNeed,
 		payload.SpecialNeedsType,
 		studentID,
@@ -472,6 +495,149 @@ func (s *StudentsStore) UpdateStudentPersonal(ctx context.Context, payload Stude
 		payload.SpecialNeed,
 		payload.SpecialNeedsType,
 		payload.ID,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *StudentsStore) GetStudentInstitutionByID(ctx context.Context, studentID int64) (*StudentInstitution, error) {
+	query := `
+	SELECT id, inst_name, inst_type, category, telephone, email, address, inst_county, inst_sub_county, inst_ward, principal_name, year_joined, curr_class_level, adm_no, student_id, bank_name, bank_branch, bank_acc_name, bank_acc_no
+	FROM students_institution WHERE student_id = $1;	`
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
+	defer cancel()
+
+	studentInstitution := &StudentInstitution{}
+
+	if err := s.db.QueryRowContext(ctx, query, studentID).Scan(
+		&studentInstitution.ID,
+		&studentInstitution.InstName,
+		&studentInstitution.InstType,
+		&studentInstitution.Category,
+		&studentInstitution.Telephone,
+		&studentInstitution.Email,
+		&studentInstitution.Address,
+		&studentInstitution.InstCounty,
+		&studentInstitution.InstSubCounty,
+		&studentInstitution.InstWard,
+		&studentInstitution.PrincipalName,
+		&studentInstitution.YearJoined,
+		&studentInstitution.CurrClassLevel,
+		&studentInstitution.AdmNo,
+		&studentInstitution.StudentID,
+		&studentInstitution.BankName,
+		&studentInstitution.BankBranch,
+		&studentInstitution.BankAccName,
+		&studentInstitution.BankAccNo,
+	); err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return nil, errors.New("student institution details not found")
+		default:
+			return nil, err
+		}
+	}
+
+	return studentInstitution, nil
+}
+
+func (s *StudentsStore) CreateStudentInstitution(ctx context.Context, payload StudentInstitution, studentID int64) error {
+	query := `
+		INSERT INTO public.students_institution(
+			inst_name, inst_type, category, telephone, email, address, 
+			inst_county, inst_sub_county, inst_ward, principal_name, 
+			year_joined, curr_class_level, adm_no, bank_name, 
+			bank_branch, bank_acc_name, bank_acc_no, student_id
+		)
+		VALUES 
+			($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18);
+	`
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
+
+	_, err := s.db.ExecContext(
+		ctx,
+		query,
+		payload.InstName,
+		payload.InstType,
+		payload.Category,
+		payload.Telephone,
+		payload.Email,
+		payload.Address,
+		payload.InstCounty,
+		payload.InstSubCounty,
+		payload.InstWard,
+		payload.PrincipalName,
+		payload.YearJoined,
+		payload.CurrClassLevel,
+		payload.AdmNo,
+		payload.BankName,
+		payload.BankBranch,
+		payload.BankAccName,
+		payload.BankAccNo,
+		studentID,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *StudentsStore) UpdateStudentInstitution(ctx context.Context, payload StudentInstitution, studentID int64) error {
+	query := `
+		UPDATE students_institution
+		SET 
+			inst_name = $2,
+			inst_type = $3,
+			category = $4,
+			telephone = $5,
+			email = $6,
+			address = $7,
+			inst_county = $8,
+			inst_sub_county = $9,
+			inst_ward = $10,
+			principal_name = $11,
+			year_joined = $12,
+			curr_class_level = $13,
+			adm_no = $14,
+			bank_name = $15,
+			bank_branch = $16,
+			bank_acc_name = $17,
+			bank_acc_no = $18
+		WHERE id = $1;
+
+	`
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
+
+	_, err := s.db.ExecContext(
+		ctx,
+		query,
+		payload.ID,
+		payload.InstName,
+		payload.InstType,
+		payload.Category,
+		payload.Telephone,
+		payload.Email,
+		payload.Address,
+		payload.InstCounty,
+		payload.InstSubCounty,
+		payload.InstWard,
+		payload.PrincipalName,
+		payload.YearJoined,
+		payload.CurrClassLevel,
+		payload.AdmNo,
+		payload.BankName,
+		payload.BankBranch,
+		payload.BankAccName,
+		payload.BankAccNo,
 	)
 	if err != nil {
 		return err

@@ -42,6 +42,10 @@ type Storage struct {
 		GetStudentPersonalByID(context.Context, int64) (*StudentPersonal, error)
 		CreateStudentPersonal(context.Context, StudentPersonal, int64) error
 		UpdateStudentPersonal(context.Context, StudentPersonal, int64) error
+
+		GetStudentInstitutionByID(context.Context, int64) (*StudentInstitution, error)
+		CreateStudentInstitution(context.Context, StudentInstitution, int64) error
+		UpdateStudentInstitution(context.Context, StudentInstitution, int64) error
 	}
 }
 

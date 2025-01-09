@@ -129,6 +129,10 @@ func (a *application) mount() http.Handler {
 				r.Get("/personal", a.getStudentPersonalHandler)
 				r.Post("/personal", a.createStudentPersonalHandler)
 				r.Put("/personal", a.updateStudentPersonalHandler)
+
+				r.Get("/institution", a.getStudentInstitutionHandler)
+				r.Post("/institution", a.createStudentInstitutionHandler)
+				r.Put("/institution", a.updateStudentInstitutionHandler)
 			})
 		})
 	})

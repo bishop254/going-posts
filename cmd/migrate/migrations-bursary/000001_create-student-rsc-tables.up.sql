@@ -26,8 +26,8 @@ CREATE TABLE
         "citizenship" VARCHAR(255) NOT NULL,
         "religion" VARCHAR(255) NOT NULL,
         "parental_status" VARCHAR(255) NOT NULL,
-        "birth_cert_no" VARCHAR(255) NOT NULL,
-        "birth_town" VARCHAR(255) NULL,
+        "birth_cert_no" VARCHAR(255) NULL,
+        "birth_town" VARCHAR(255) NULL ,
         "birth_county" VARCHAR(255) NOT NULL,
         "birth_sub_county" VARCHAR(255) NOT NULL,
         "ward" VARCHAR(255) NOT NULL,
@@ -36,9 +36,9 @@ CREATE TABLE
         "id_number" BIGINT NULL,
         "phone" BIGINT NOT NULL,
         "kra_pin_no" VARCHAR(255) NULL,
-        "passport_no" BIGINT NULL,
-        "special_need" BOOLEAN NOT NULL,
-        "special_needs_type" VARCHAR(255) NOT NULL,
+        "passport_no" VARCHAR(255) NULL,
+        "special_need" INT NOT NULL DEFAULT 0,
+        "special_needs_type" VARCHAR(255) NULL DEFAULT "N/A",
         "student_id" bigserial NOT NULL
     );
 
@@ -49,7 +49,7 @@ CREATE TABLE
         "id" bigserial NOT NULL,
         "inst_name" VARCHAR(255) NOT NULL,
         "inst_type" VARCHAR(255) NOT NULL,
-        "category" VARCHAR(255) NOT NULL,
+        "category" VARCHAR(255) NULL,
         "telephone" BIGINT NOT NULL,
         "email" VARCHAR(255) NULL,
         "address" VARCHAR(255) NOT NULL,

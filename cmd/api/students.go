@@ -157,17 +157,44 @@ func (a *application) loginStudentHandler(w http.ResponseWriter, r *http.Request
 		Token     string `json:"token"`
 		Firstname string `json:"firstname"`
 		Email     string `json:"email"`
+		UID       int64  `json:"uid"`
 		Blocked   bool   `json:"blocked"`
 		CreatedAt string `json:"created_at"`
 	}{
 		Token:     token,
 		Firstname: student.Firstname,
 		Email:     student.Email,
+		UID:       student.ID,
 		Blocked:   student.Blocked,
 		CreatedAt: student.CreatedAt,
 	}
 
 	if err := jsonResponse(w, http.StatusOK, loginResp); err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+}
+
+func getStudentFromCtx(r *http.Request) *store.Student {
+	student, _ := r.Context().Value(studentCtx).(*store.Student)
+	return student
+}
+
+// Personal
+func (a *application) getStudentPersonalHandler(w http.ResponseWriter, r *http.Request) {
+	student := getStudentFromCtx(r)
+
+	ctx := r.Context()
+
+	studentPersonalData, err := a.store.Students.GetStudentPersonalByID(ctx, student.ID)
+	if err != nil {
+		a.notFoundError(w, r, err)
+		return
+	}
+
+	student.Personal = store.StudentPersonal(*studentPersonalData)
+
+	if err := jsonResponse(w, http.StatusOK, student); err != nil {
 		a.internalServerError(w, r, err)
 		return
 	}
@@ -189,55 +216,9 @@ type StudentPersonalPayload struct {
 	IDNumber         *int64 `json:"id_number,omitempty"`
 	Phone            int64  `json:"phone" validate:"required"`
 	KraPinNo         string `json:"kra_pin_no,omitempty"`
-	PassportNo       *int64 `json:"passport_no,omitempty"`
-	SpecialNeed      bool   `json:"special_need" validate:"required"`
+	PassportNo       string `json:"passport_no,omitempty"`
+	SpecialNeed      bool   `json:"special_need"`
 	SpecialNeedsType string `json:"special_needs_type" validate:"required"`
-}
-
-type UpdateStudentPersonalPayload struct {
-	ID               int64  `json:"id" validate:"required"`
-	Dob              string `json:"dob" validate:"required"`
-	Gender           string `json:"gender" validate:"required"`
-	Citizenship      string `json:"citizenship" validate:"required"`
-	Religion         string `json:"religion" validate:"required"`
-	ParentalStatus   string `json:"parental_status" validate:"required"`
-	BirthCertNo      string `json:"birth_cert_no" validate:"required"`
-	BirthTown        string `json:"birth_town,omitempty"`
-	BirthCounty      string `json:"birth_county" validate:"required"`
-	BirthSubCounty   string `json:"birth_sub_county" validate:"required"`
-	Ward             string `json:"ward" validate:"required"`
-	VotersCardNo     string `json:"voters_card_no,omitempty"`
-	Residence        string `json:"residence" validate:"required"`
-	IDNumber         *int64 `json:"id_number,omitempty"`
-	Phone            int64  `json:"phone" validate:"required"`
-	KraPinNo         string `json:"kra_pin_no,omitempty"`
-	PassportNo       *int64 `json:"passport_no,omitempty"`
-	SpecialNeed      bool   `json:"special_need" validate:"required"`
-	SpecialNeedsType string `json:"special_needs_type" validate:"required"`
-}
-
-func (a *application) getStudentPersonalHandler(w http.ResponseWriter, r *http.Request) {
-	student := getStudentFromCtx(r)
-
-	ctx := r.Context()
-
-	studentPersonalData, err := a.store.Students.GetStudentPersonalByID(ctx, student.ID)
-	if err != nil {
-		a.notFoundError(w, r, err)
-		return
-	}
-
-	student.Personal = store.StudentPersonal(*studentPersonalData)
-
-	if err := jsonResponse(w, http.StatusOK, student); err != nil {
-		a.internalServerError(w, r, err)
-		return
-	}
-}
-
-func getStudentFromCtx(r *http.Request) *store.Student {
-	student, _ := r.Context().Value(studentCtx).(*store.Student)
-	return student
 }
 
 func (a *application) createStudentPersonalHandler(w http.ResponseWriter, r *http.Request) {
@@ -289,6 +270,28 @@ func (a *application) createStudentPersonalHandler(w http.ResponseWriter, r *htt
 	}
 }
 
+type UpdateStudentPersonalPayload struct {
+	ID               int64  `json:"id" validate:"required"`
+	Dob              string `json:"dob" validate:"required"`
+	Gender           string `json:"gender" validate:"required"`
+	Citizenship      string `json:"citizenship" validate:"required"`
+	Religion         string `json:"religion" validate:"required"`
+	ParentalStatus   string `json:"parental_status" validate:"required"`
+	BirthCertNo      string `json:"birth_cert_no" validate:"required"`
+	BirthTown        string `json:"birth_town,omitempty"`
+	BirthCounty      string `json:"birth_county" validate:"required"`
+	BirthSubCounty   string `json:"birth_sub_county" validate:"required"`
+	Ward             string `json:"ward" validate:"required"`
+	VotersCardNo     string `json:"voters_card_no,omitempty"`
+	Residence        string `json:"residence" validate:"required"`
+	IDNumber         *int64 `json:"id_number,omitempty"`
+	Phone            int64  `json:"phone" validate:"required"`
+	KraPinNo         string `json:"kra_pin_no,omitempty"`
+	PassportNo       string `json:"passport_no,omitempty"`
+	SpecialNeed      bool   `json:"special_need"`
+	SpecialNeedsType string `json:"special_needs_type" validate:"required"`
+}
+
 func (a *application) updateStudentPersonalHandler(w http.ResponseWriter, r *http.Request) {
 	student := getStudentFromCtx(r)
 
@@ -334,6 +337,164 @@ func (a *application) updateStudentPersonalHandler(w http.ResponseWriter, r *htt
 	}
 
 	if err := jsonResponse(w, http.StatusCreated, student); err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+}
+
+// Institution
+func (a *application) getStudentInstitutionHandler(w http.ResponseWriter, r *http.Request) {
+	student := getStudentFromCtx(r)
+
+	ctx := r.Context()
+
+	studentInstitutionData, err := a.store.Students.GetStudentInstitutionByID(ctx, student.ID)
+	if err != nil {
+		a.notFoundError(w, r, err)
+		return
+	}
+
+	student.Institution = store.StudentInstitution(*studentInstitutionData)
+
+	if err := jsonResponse(w, http.StatusOK, studentInstitutionData); err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+}
+
+type StudentInstitutionPayload struct {
+	InstName       string `json:"inst_name" validate:"required"`
+	InstType       string `json:"inst_type" validate:"required"`
+	Category       string `json:"category,omitempty"`
+	Telephone      int64  `json:"telephone" validate:"required"`
+	Email          string `json:"email,omitempty"`
+	Address        string `json:"address" validate:"required"`
+	InstCounty     string `json:"inst_county" validate:"required"`
+	InstSubCounty  string `json:"inst_sub_county" validate:"required"`
+	InstWard       string `json:"inst_ward,omitempty"`
+	PrincipalName  string `json:"principal_name" validate:"required"`
+	YearJoined     int64  `json:"year_joined" validate:"required"`
+	CurrClassLevel string `json:"curr_class_level" validate:"required"`
+	AdmNo          string `json:"adm_no" validate:"required"`
+	BankName       string `json:"bank_name" validate:"required"`
+	BankBranch     string `json:"bank_branch" validate:"required"`
+	BankAccName    string `json:"bank_acc_name" validate:"required"`
+	BankAccNo      int64  `json:"bank_acc_no" validate:"required"`
+}
+
+func (a *application) createStudentInstitutionHandler(w http.ResponseWriter, r *http.Request) {
+	student := getStudentFromCtx(r)
+
+	var payload StudentInstitutionPayload
+	if err := readJSON(w, r, &payload); err != nil {
+		a.badRequestError(w, r, err)
+		return
+	}
+
+	if err := Validate.Struct(payload); err != nil {
+		a.badRequestError(w, r, err)
+		return
+	}
+
+	studentInstitutionData := &store.StudentInstitution{
+		InstName:       payload.InstName,
+		InstType:       payload.InstType,
+		Category:       payload.Category,
+		Telephone:      payload.Telephone,
+		Email:          payload.Email,
+		Address:        payload.Address,
+		InstCounty:     payload.InstCounty,
+		InstSubCounty:  payload.InstSubCounty,
+		InstWard:       payload.InstWard,
+		PrincipalName:  payload.PrincipalName,
+		YearJoined:     payload.YearJoined,
+		CurrClassLevel: payload.CurrClassLevel,
+		AdmNo:          payload.AdmNo,
+		StudentID:      student.ID,
+		BankName:       payload.BankName,
+		BankBranch:     payload.BankBranch,
+		BankAccName:    payload.BankAccName,
+		BankAccNo:      payload.BankAccNo,
+	}
+
+	ctx := r.Context()
+
+	if err := a.store.Students.CreateStudentInstitution(ctx, *studentInstitutionData, student.ID); err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+
+	if err := jsonResponse(w, http.StatusCreated, student); err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+}
+
+type UpdateStudentInstitutionPayload struct {
+	ID             int64  `json:"id" validate:"required"`
+	InstName       string `json:"inst_name" validate:"required"`
+	InstType       string `json:"inst_type" validate:"required"`
+	Category       string `json:"category,omitempty"`
+	Telephone      int64  `json:"telephone" validate:"required"`
+	Email          string `json:"email,omitempty"`
+	Address        string `json:"address" validate:"required"`
+	InstCounty     string `json:"inst_county" validate:"required"`
+	InstSubCounty  string `json:"inst_sub_county" validate:"required"`
+	InstWard       string `json:"inst_ward,omitempty"`
+	PrincipalName  string `json:"principal_name" validate:"required"`
+	YearJoined     int64  `json:"year_joined" validate:"required"`
+	CurrClassLevel string `json:"curr_class_level" validate:"required"`
+	AdmNo          string `json:"adm_no" validate:"required"`
+	BankName       string `json:"bank_name" validate:"required"`
+	BankBranch     string `json:"bank_branch" validate:"required"`
+	BankAccName    string `json:"bank_acc_name" validate:"required"`
+	BankAccNo      int64  `json:"bank_acc_no" validate:"required"`
+}
+
+func (a *application) updateStudentInstitutionHandler(w http.ResponseWriter, r *http.Request) {
+	student := getStudentFromCtx(r)
+
+	var payload UpdateStudentInstitutionPayload
+	if err := readJSON(w, r, &payload); err != nil {
+		a.badRequestError(w, r, err)
+		return
+	}
+
+	if err := Validate.Struct(payload); err != nil {
+		a.badRequestError(w, r, err)
+		return
+	}
+
+	studentInstitutionData := &store.StudentInstitution{
+		ID:             payload.ID,
+		InstName:       payload.InstName,
+		InstType:       payload.InstType,
+		Category:       payload.Category,
+		Telephone:      payload.Telephone,
+		Email:          payload.Email,
+		Address:        payload.Address,
+		InstCounty:     payload.InstCounty,
+		InstSubCounty:  payload.InstSubCounty,
+		InstWard:       payload.InstWard,
+		PrincipalName:  payload.PrincipalName,
+		YearJoined:     payload.YearJoined,
+		CurrClassLevel: payload.CurrClassLevel,
+		AdmNo:          payload.AdmNo,
+		StudentID:      student.ID,
+		BankName:       payload.BankName,
+		BankBranch:     payload.BankBranch,
+		BankAccName:    payload.BankAccName,
+		BankAccNo:      payload.BankAccNo,
+	}
+
+	ctx := r.Context()
+
+	if err := a.store.Students.UpdateStudentInstitution(ctx, *studentInstitutionData, student.ID); err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+
+	if err := jsonResponse(w, http.StatusCreated, studentInstitutionData); err != nil {
 		a.internalServerError(w, r, err)
 		return
 	}
