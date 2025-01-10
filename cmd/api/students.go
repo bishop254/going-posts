@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -13,6 +15,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/minio/minio-go/v7"
 )
 
 type RegisterStudentPayload struct {
@@ -971,6 +974,106 @@ func (a *application) deleteStudentGuardiansHandler(w http.ResponseWriter, r *ht
 	}
 
 	if err := jsonResponse(w, http.StatusNoContent, ""); err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+}
+
+func (a *application) uploadDocumentsHandler(w http.ResponseWriter, r *http.Request) {
+	// student := getStudentFromCtx(r)
+
+	ctx := r.Context()
+
+	err := r.ParseMultipartForm(10 << 20) // 10 MB
+	if err != nil {
+		a.badRequestError(w, r, err)
+		return
+	}
+
+	file, header, err := r.FormFile("declaration")
+	if err != nil {
+		a.badRequestError(w, r, err)
+		return
+	}
+	file1, header1, err := r.FormFile("death_cert")
+	if err != nil {
+		a.badRequestError(w, r, err)
+		return
+	}
+	file2, _, err := r.FormFile("birth_cert")
+	if err != nil {
+		a.badRequestError(w, r, err)
+		return
+	}
+
+	file3, _, _ := r.FormFile("id_front")
+
+	defer file.Close()
+	defer file1.Close()
+	fmt.Println(file)
+	fmt.Println()
+	fmt.Print(file1)
+	fmt.Println()
+	fmt.Print(file2)
+	fmt.Println()
+	fmt.Print(file3)
+
+	//
+	bucketName := goDotEnvVariable("MINIO_BUCKET")
+
+	var buf bytes.Buffer
+	_, err = io.Copy(&buf, file)
+	if err != nil {
+		a.badRequestError(w, r, err)
+		return
+	}
+
+	objectName := header.Filename
+	fileBuffer := []byte(buf.Bytes())
+	reader := bytes.NewReader(fileBuffer)
+	contentType := header.Header["Content-Type"][0]
+	fileSize := header.Size
+
+	info, err := a.minio.PutObject(ctx, bucketName, objectName, reader, fileSize, minio.PutObjectOptions{
+		ContentType: contentType,
+	})
+	if err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+
+	var buf1 bytes.Buffer
+	_, err = io.Copy(&buf1, file1)
+	if err != nil {
+		a.badRequestError(w, r, err)
+		return
+	}
+
+	objectName = header1.Filename
+	fileBuffer = []byte(buf1.Bytes())
+	reader = bytes.NewReader(fileBuffer)
+	contentType = header1.Header["Content-Type"][0]
+	fileSize = header1.Size
+
+	info1, err := a.minio.PutObject(ctx, bucketName, objectName, reader, fileSize, minio.PutObjectOptions{
+		ContentType: contentType,
+	})
+	if err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+
+	uploadResp := struct {
+		Declaration string `json:"declaration"`
+		DeathCert   string `json:"death_cert"`
+		CreatedAt   string `json:"created_at"`
+	}{
+		Declaration: info.Key,
+		DeathCert:   info1.Key,
+		CreatedAt:   time.Now().String(),
+	}
+
+	if err := jsonResponse(w, http.StatusCreated, uploadResp); err != nil {
 		a.internalServerError(w, r, err)
 		return
 	}

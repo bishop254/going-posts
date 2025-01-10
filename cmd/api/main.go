@@ -6,6 +6,7 @@ import (
 	"github.com/bishop254/bursary/internal/auth"
 	"github.com/bishop254/bursary/internal/db"
 	"github.com/bishop254/bursary/internal/mailer"
+	"github.com/bishop254/bursary/internal/minio"
 	"github.com/bishop254/bursary/internal/store"
 	"go.uber.org/zap"
 )
@@ -38,7 +39,16 @@ func main() {
 			jwtAuth: jwtConfig{
 				secret: goDotEnvVariable("JWT_SECRET"),
 				exp:    time.Hour * 1,
+				iss:    "migBurs",
+				aud:    "migBurs",
 			},
+		},
+		minio: minioConfig{
+			endpoint:        goDotEnvVariable("MINIO_ENDPOINT"),
+			accessKeyID:     goDotEnvVariable("MINIO_ACCESSKEY"),
+			secretAccessKey: goDotEnvVariable("MINIO_SECRETKEY"),
+			bucketName:      goDotEnvVariable("MINIO_BUCKET"),
+			useSSL:          false,
 		},
 	}
 
@@ -58,8 +68,14 @@ func main() {
 	defer db.Close()
 	logger.Info("DB connection established")
 
+	minioClient, err := minio.NewMinioClient(cfg.minio.endpoint, cfg.minio.accessKeyID, cfg.minio.secretAccessKey, cfg.minio.useSSL)
+	if err != nil {
+		logger.Fatal(err)
+	}
+	logger.Info("MINIO connection established")
+
 	mailer := mailer.NewSendGrid(cfg.mail.sendGrid.apiKey, cfg.mail.fromEmail)
-	jwtAuthenticator := auth.NewJWTAuthenticator(cfg.auth.jwtAuth.secret, "migBurs", "migBurs")
+	jwtAuthenticator := auth.NewJWTAuthenticator(cfg.auth.jwtAuth.secret, cfg.auth.jwtAuth.aud, cfg.auth.jwtAuth.iss)
 
 	store := store.NewStorage(db)
 	app := &application{
@@ -68,6 +84,7 @@ func main() {
 		logger:        logger,
 		mailer:        mailer,
 		authenticator: &jwtAuthenticator,
+		minio:         minioClient,
 	}
 
 	mux := app.mount()

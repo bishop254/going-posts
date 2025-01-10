@@ -9,6 +9,7 @@ import (
 	"github.com/bishop254/bursary/internal/store"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/minio/minio-go/v7"
 	"go.uber.org/zap"
 )
 
@@ -19,14 +20,16 @@ type application struct {
 	logger        *zap.SugaredLogger
 	mailer        mailer.Client
 	authenticator auth.Authenticator
+	minio         *minio.Client
 }
 
 type config struct {
-	addr string
-	db   dbConfig
-	env  string
-	mail mailConfig
-	auth authConfig
+	addr  string
+	db    dbConfig
+	env   string
+	mail  mailConfig
+	auth  authConfig
+	minio minioConfig
 }
 
 type authConfig struct {
@@ -37,6 +40,8 @@ type authConfig struct {
 type jwtConfig struct {
 	secret string
 	exp    time.Duration
+	iss    string
+	aud    string
 }
 
 type basicAuthConfig struct {
@@ -59,6 +64,14 @@ type mailConfig struct {
 
 type sendGridConfig struct {
 	apiKey string
+}
+
+type minioConfig struct {
+	endpoint        string
+	accessKeyID     string
+	secretAccessKey string
+	bucketName      string
+	useSSL          bool
 }
 
 func (a *application) mount() http.Handler {
@@ -146,6 +159,8 @@ func (a *application) mount() http.Handler {
 				r.Get("/emergency", a.getStudentEmergencyHandler)
 				r.Post("/emergency", a.createStudentEmergencyHandler)
 				r.Put("/emergency", a.updateStudentEmergencyHandler)
+
+				r.Post("/documents", a.uploadDocumentsHandler)
 			})
 		})
 	})
