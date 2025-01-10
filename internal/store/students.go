@@ -43,7 +43,7 @@ type StudentPersonal struct {
 	Phone            int64  `json:"phone"`
 	KraPinNo         string `json:"kra_pin_no,omitempty"`
 	PassportNo       string `json:"passport_no,omitempty"`
-	SpecialNeed      bool   `json:"special_need"`
+	SpecialNeed      int64  `json:"special_need"`
 	SpecialNeedsType string `json:"special_needs_type"`
 	StudentID        int64  `json:"student_id"`
 }
@@ -68,6 +68,68 @@ type StudentInstitution struct {
 	BankBranch     string `json:"bank_branch"`
 	BankAccName    string `json:"bank_acc_name"`
 	BankAccNo      int64  `json:"bank_acc_no"`
+}
+
+type StudentSponsor struct {
+	ID                 int64  `json:"id"`
+	Name               string `json:"name"`
+	SponsorshipType    string `json:"sponsorship_type"`
+	SponsorshipNature  string `json:"sponsorship_nature"`
+	Phone              int64  `json:"phone"`
+	Email              string `json:"email,omitempty"`
+	Address            string `json:"address,omitempty"`
+	ContactPersonName  string `json:"contact_person_name,omitempty"`
+	ContactPersonPhone int64  `json:"contact_person_phone,omitempty"`
+	StudentID          int64  `json:"student_id"`
+	UpdatedAt          string `json:"updated_at"`
+}
+
+type StudentEmergency struct {
+	ID           int64  `json:"id"`
+	Firstname    string `json:"firstname"`
+	Middlename   string `json:"middlename,omitempty"`
+	Lastname     string `json:"lastname"`
+	Phone        int64  `json:"phone"`
+	Email        string `json:"email,omitempty"`
+	IdNumber     int64  `json:"id_number"`
+	Occupation   string `json:"occupation,omitempty"`
+	Relationship string `json:"relationship"`
+	Residence    string `json:"residence"`
+	Town         string `json:"town,omitempty"`
+	WorkPlace    string `json:"work_place,omitempty"`
+	WorkPhone    int64  `json:"work_phone,omitempty"`
+	ProvidedBy   string `json:"provided_by,omitempty"`
+	StudentID    int64  `json:"student_id"`
+	UpdatedAt    string `json:"updated_at"`
+}
+
+type StudentGuardian struct {
+	ID             int64  `json:"id"`
+	Title          string `json:"title"`
+	Firstname      string `json:"firstname"`
+	Lastname       string `json:"lastname"`
+	Middlename     string `json:"middlename,omitempty"`
+	Phone          int64  `json:"phone"`
+	PhoneAlternate *int64 `json:"phone_alternate,omitempty"`
+	Email          string `json:"email,omitempty"`
+	IdNumber       int64  `json:"id_number"`
+	KraPinNo       string `json:"kra_pin_no,omitempty"`
+	PassportNo     string `json:"passport_no,omitempty"`
+	AlienNo        string `json:"alien_no,omitempty"`
+	Occupation     string `json:"occupation,omitempty"`
+	WorkLocation   string `json:"work_location,omitempty"`
+	WorkPhone      *int64 `json:"work_phone,omitempty"`
+	Relationship   string `json:"relationship"`
+	Address        string `json:"address,omitempty"`
+	Residence      string `json:"residence"`
+	Town           string `json:"town"`
+	County         string `json:"county"`
+	SubCounty      string `json:"sub_county"`
+	Ward           string `json:"ward,omitempty"`
+	VotersCardNo   string `json:"voters_card_no,omitempty"`
+	PollingStation string `json:"polling_station,omitempty"`
+	StudentID      int64  `json:"student_id"`
+	UpdatedAt      string `json:"updated_at"`
 }
 
 type StudentInvitation struct {
@@ -467,8 +529,11 @@ func (s *StudentsStore) UpdateStudentPersonal(ctx context.Context, payload Stude
 			special_need = $17,
 			special_needs_type = $18
 		WHERE id = $19;
-
 	`
+
+	fmt.Println("query")
+	fmt.Println(query)
+	fmt.Println("query")
 
 	ctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
@@ -495,6 +560,7 @@ func (s *StudentsStore) UpdateStudentPersonal(ctx context.Context, payload Stude
 		payload.SpecialNeed,
 		payload.SpecialNeedsType,
 		payload.ID,
+		// studentID,
 	)
 	if err != nil {
 		return err
@@ -639,6 +705,552 @@ func (s *StudentsStore) UpdateStudentInstitution(ctx context.Context, payload St
 		payload.BankAccName,
 		payload.BankAccNo,
 	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *StudentsStore) GetStudentSponsorByID(ctx context.Context, studentID int64) (*StudentSponsor, error) {
+	query := `
+		SELECT id,name,sponsorship_type,sponsorship_nature,phone,email,
+		address,contact_person_name,contact_person_phone,updated_at 
+		FROM students_sponsor WHERE student_id = $1;	`
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
+	defer cancel()
+
+	studentSponsor := &StudentSponsor{}
+
+	if err := s.db.QueryRowContext(ctx, query, studentID).Scan(
+		&studentSponsor.ID,
+		&studentSponsor.Name,
+		&studentSponsor.SponsorshipType,
+		&studentSponsor.SponsorshipNature,
+		&studentSponsor.Phone,
+		&studentSponsor.Email,
+		&studentSponsor.Address,
+		&studentSponsor.ContactPersonName,
+		&studentSponsor.ContactPersonPhone,
+		&studentSponsor.UpdatedAt,
+	); err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return nil, errors.New("student sponsor details not found")
+		default:
+			return nil, err
+		}
+	}
+
+	return studentSponsor, nil
+}
+
+func (s *StudentsStore) CreateStudentSponsor(ctx context.Context, payload StudentSponsor, studentID int64) error {
+	query := `
+		INSERT INTO students_sponsor (
+			name, 
+			sponsorship_type, 
+			sponsorship_nature, 
+			phone, 
+			email, 
+			address, 
+			contact_person_name, 
+			contact_person_phone, 
+			student_id, 
+			updated_at
+		)
+		VALUES
+			($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
+`
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
+
+	_, err := s.db.ExecContext(
+		ctx,
+		query,
+		payload.Name,
+		payload.SponsorshipType,
+		payload.SponsorshipNature,
+		payload.Phone,
+		payload.Email,
+		payload.Address,
+		payload.ContactPersonName,
+		payload.ContactPersonPhone,
+		studentID,
+		time.Now(),
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *StudentsStore) UpdateStudentSponsor(ctx context.Context, payload StudentSponsor, studentID int64) error {
+	query := `
+		UPDATE students_sponsor
+		SET
+			name = $1,
+			sponsorship_type = $2,
+			sponsorship_nature = $3,
+			phone = $4,
+			email = $5,
+			address = $6,
+			contact_person_name = $7,
+			contact_person_phone = $8,
+			updated_at = $10
+		WHERE
+			id = $11 AND student_id= $9 ;
+	`
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
+
+	_, err := s.db.ExecContext(
+		ctx,
+		query,
+		payload.Name,
+		payload.SponsorshipType,
+		payload.SponsorshipNature,
+		payload.Phone,
+		payload.Email,
+		payload.Address,
+		payload.ContactPersonName,
+		payload.ContactPersonPhone,
+		studentID,
+		time.Now(),
+		payload.ID,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *StudentsStore) GetStudentEmergencyByID(ctx context.Context, studentID int64) (*StudentEmergency, error) {
+	query := `
+		SELECT id,firstname,middlename,lastname,phone,
+		email,id_number,occupation,relationship,residence,town,work_place,
+		work_phone,provided_by,student_id,updated_at FROM students_emergency
+		 WHERE student_id = $1;	`
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
+	defer cancel()
+
+	studentEmergency := &StudentEmergency{}
+
+	if err := s.db.QueryRowContext(ctx, query, studentID).Scan(
+		&studentEmergency.ID,
+		&studentEmergency.Firstname,
+		&studentEmergency.Middlename,
+		&studentEmergency.Lastname,
+		&studentEmergency.Phone,
+		&studentEmergency.Email,
+		&studentEmergency.IdNumber,
+		&studentEmergency.Occupation,
+		&studentEmergency.Relationship,
+		&studentEmergency.Residence,
+		&studentEmergency.Town,
+		&studentEmergency.WorkPlace,
+		&studentEmergency.WorkPhone,
+		&studentEmergency.ProvidedBy,
+		&studentEmergency.StudentID,
+		&studentEmergency.UpdatedAt,
+	); err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return nil, errors.New("student emergency details not found")
+		default:
+			return nil, err
+		}
+	}
+
+	return studentEmergency, nil
+}
+
+func (s *StudentsStore) CreateStudentEmergency(ctx context.Context, payload StudentEmergency, studentID int64) error {
+	query := `
+	INSERT INTO 
+	students_emergency (
+		firstname, 
+		middlename, 
+		lastname, 
+		phone, 
+		email, 
+		id_number, 
+		occupation, 
+		relationship, 
+		residence, 
+		town, 
+		work_place, 
+		work_phone, 
+		provided_by, 
+		student_id,
+		updated_at
+	)
+	VALUES
+	(
+		$1, 
+		$2, 
+		$3, 
+		$4, 
+		$5, 
+		$6, 
+		$7, 
+		$8, 
+		$9, 
+		$10, 
+		$11, 
+		$12, 
+		$13, 
+		$14,
+		$15
+	);
+`
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
+
+	_, err := s.db.ExecContext(
+		ctx,
+		query,
+		payload.Firstname,
+		payload.Middlename,
+		payload.Lastname,
+		payload.Phone,
+		payload.Email,
+		payload.IdNumber,
+		payload.Occupation,
+		payload.Relationship,
+		payload.Residence,
+		payload.Town,
+		payload.WorkPlace,
+		payload.WorkPhone,
+		payload.ProvidedBy,
+		studentID,
+		time.Now(),
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *StudentsStore) UpdateStudentEmergency(ctx context.Context, payload StudentEmergency, studentID int64) error {
+	query := `
+		UPDATE 
+		students_emergency 
+		SET 
+			firstname = $2,
+			middlename = $3,
+			lastname = $4,
+			phone = $5,
+			email = $6,
+			id_number = $7,
+			occupation = $8,
+			relationship = $9,
+			residence = $10,
+			town = $11,
+			work_place = $12,
+			work_phone = $13,
+			provided_by = $14,
+			updated_at = $16
+		WHERE
+			id = $1 AND student_id= $15 ;
+	`
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
+
+	_, err := s.db.ExecContext(
+		ctx,
+		query,
+		payload.ID,
+		payload.Firstname,
+		payload.Middlename,
+		payload.Lastname,
+		payload.Phone,
+		payload.Email,
+		payload.IdNumber,
+		payload.Occupation,
+		payload.Relationship,
+		payload.Residence,
+		payload.Town,
+		payload.WorkPlace,
+		payload.WorkPhone,
+		payload.ProvidedBy,
+		studentID,
+		time.Now(),
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *StudentsStore) GetStudentGuardiansByID(ctx context.Context, studentID int64) ([]StudentGuardian, error) {
+	query := `
+    SELECT 
+		id,title,firstname,lastname,middlename,phone,
+		phone_alternate,email,id_number,kra_pin_no,passport_no,
+		alien_no,occupation,work_location,work_phone,relationship,
+		address,residence,town,county,sub_county,ward,
+		voters_card_no,polling_station,student_id,updated_at 
+	FROM students_guardian
+		 WHERE student_id = $1;	`
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
+	defer cancel()
+
+	rows, err := s.db.QueryContext(ctx, query, studentID)
+
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return nil, errors.New("student guardian details not found")
+		default:
+			return nil, err
+		}
+	}
+	defer rows.Close()
+
+	guardians := []StudentGuardian{}
+
+	for rows.Next() {
+		var gd StudentGuardian
+		err := rows.Scan(
+			&gd.ID,
+			&gd.Title,
+			&gd.Firstname,
+			&gd.Lastname,
+			&gd.Middlename,
+			&gd.Phone,
+			&gd.PhoneAlternate,
+			&gd.Email,
+			&gd.IdNumber,
+			&gd.KraPinNo,
+			&gd.PassportNo,
+			&gd.AlienNo,
+			&gd.Occupation,
+			&gd.WorkLocation,
+			&gd.WorkPhone,
+			&gd.Relationship,
+			&gd.Address,
+			&gd.Residence,
+			&gd.Town,
+			&gd.County,
+			&gd.SubCounty,
+			&gd.Ward,
+			&gd.VotersCardNo,
+			&gd.PollingStation,
+			&gd.StudentID,
+			&gd.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		guardians = append(guardians, gd)
+	}
+	return guardians, nil
+}
+
+func (s *StudentsStore) CreateStudentGuardian(ctx context.Context, payload StudentGuardian, studentID int64) error {
+	query := `
+	INSERT INTO 
+	students_guardian (
+		title, 
+		firstname, 
+		lastname, 
+		middlename, 
+		phone, 
+		phone_alternate, 
+		email, 
+		id_number, 
+		kra_pin_no, 
+		passport_no, 
+		alien_no, 
+		occupation, 
+		work_location, 
+		work_phone, 
+		relationship, 
+		address, 
+		residence, 
+		town, 
+		county, 
+		sub_county, 
+		ward, 
+		voters_card_no, 
+		polling_station, 
+		student_id, 
+		updated_at
+	)
+	VALUES
+	(
+		$1, 
+		$2, 
+		$3, 
+		$4, 
+		$5, 
+		$6, 
+		$7, 
+		$8, 
+		$9, 
+		$10, 
+		$11, 
+		$12, 
+		$13, 
+		$14, 
+		$15, 
+		$16, 
+		$17, 
+		$18, 
+		$19, 
+		$20, 
+		$21, 
+		$22, 
+		$23, 
+		$24, 
+		$25
+	);
+	`
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
+
+	_, err := s.db.ExecContext(
+		ctx,
+		query,
+		payload.Title,
+		payload.Firstname,
+		payload.Lastname,
+		payload.Middlename,
+		payload.Phone,
+		payload.PhoneAlternate,
+		payload.Email,
+		payload.IdNumber,
+		payload.KraPinNo,
+		payload.PassportNo,
+		payload.AlienNo,
+		payload.Occupation,
+		payload.WorkLocation,
+		payload.WorkPhone,
+		payload.Relationship,
+		payload.Address,
+		payload.Residence,
+		payload.Town,
+		payload.County,
+		payload.SubCounty,
+		payload.Ward,
+		payload.VotersCardNo,
+		01, //payload.PollingStation,
+		studentID,
+		time.Now(),
+	)
+	fmt.Println(query)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *StudentsStore) UpdateStudentGuardian(ctx context.Context, payload StudentGuardian, studentID int64) error {
+	query := `
+		UPDATE 
+			students_guardian 
+		SET 
+			title = $1,
+			firstname = $2,
+			lastname = $3,
+			middlename = $4,
+			phone = $5,
+			phone_alternate = $6,
+			email = $7,
+			id_number = $8,
+			kra_pin_no = $9,
+			passport_no = $10,
+			alien_no = $11,
+			occupation = $12,
+			work_location = $13,
+			work_phone = $14,
+			relationship = $15,
+			address = $16,
+			residence = $17,
+			town = $18,
+			county = $19,
+			sub_county = $20,
+			ward = $21,
+			voters_card_no = $22,
+			polling_station = $23,
+			updated_at = $25
+		WHERE 
+			id = $26 AND student_id= $24 ;
+	`
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
+
+	_, err := s.db.ExecContext(
+		ctx,
+		query,
+		payload.Title,
+		payload.Firstname,
+		payload.Lastname,
+		payload.Middlename,
+		payload.Phone,
+		payload.PhoneAlternate,
+		payload.Email,
+		payload.IdNumber,
+		payload.KraPinNo,
+		payload.PassportNo,
+		payload.AlienNo,
+		payload.Occupation,
+		payload.WorkLocation,
+		payload.WorkPhone,
+		payload.Relationship,
+		payload.Address,
+		payload.Residence,
+		payload.Town,
+		payload.County,
+		payload.SubCounty,
+		payload.Ward,
+		payload.VotersCardNo,
+		0, //payload.PollingStation,
+		studentID,
+		time.Now(),
+		payload.ID,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *StudentsStore) DeleteStudentGuardian(ctx context.Context, guardianId int64, studentID int64) error {
+	query := `
+		DELETE FROM 
+			students_guardian 
+		WHERE 
+			id = $1 AND student_id= $2 ;
+	`
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
+
+	_, err := s.db.ExecContext(
+		ctx,
+		query,
+		guardianId,
+		studentID,
+	)
+
 	if err != nil {
 		return err
 	}

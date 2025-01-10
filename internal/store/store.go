@@ -39,6 +39,7 @@ type Storage struct {
 		Activate(context.Context, string) error
 		GetOneByEmail(context.Context, string) (*Student, error)
 		GetOneByID(context.Context, int64) (*Student, error)
+
 		GetStudentPersonalByID(context.Context, int64) (*StudentPersonal, error)
 		CreateStudentPersonal(context.Context, StudentPersonal, int64) error
 		UpdateStudentPersonal(context.Context, StudentPersonal, int64) error
@@ -46,6 +47,19 @@ type Storage struct {
 		GetStudentInstitutionByID(context.Context, int64) (*StudentInstitution, error)
 		CreateStudentInstitution(context.Context, StudentInstitution, int64) error
 		UpdateStudentInstitution(context.Context, StudentInstitution, int64) error
+
+		GetStudentSponsorByID(context.Context, int64) (*StudentSponsor, error)
+		CreateStudentSponsor(context.Context, StudentSponsor, int64) error
+		UpdateStudentSponsor(context.Context, StudentSponsor, int64) error
+
+		GetStudentEmergencyByID(context.Context, int64) (*StudentEmergency, error)
+		CreateStudentEmergency(context.Context, StudentEmergency, int64) error
+		UpdateStudentEmergency(context.Context, StudentEmergency, int64) error
+
+		GetStudentGuardiansByID(context.Context, int64) ([]StudentGuardian, error)
+		CreateStudentGuardian(context.Context, StudentGuardian, int64) error
+		UpdateStudentGuardian(context.Context, StudentGuardian, int64) error
+		DeleteStudentGuardian(context.Context, int64, int64) error
 	}
 }
 

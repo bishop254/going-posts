@@ -192,9 +192,9 @@ func (a *application) getStudentPersonalHandler(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	student.Personal = store.StudentPersonal(*studentPersonalData)
+	// student.Personal = store.StudentPersonal(*studentPersonalData)
 
-	if err := jsonResponse(w, http.StatusOK, student); err != nil {
+	if err := jsonResponse(w, http.StatusOK, studentPersonalData); err != nil {
 		a.internalServerError(w, r, err)
 		return
 	}
@@ -217,7 +217,7 @@ type StudentPersonalPayload struct {
 	Phone            int64  `json:"phone" validate:"required"`
 	KraPinNo         string `json:"kra_pin_no,omitempty"`
 	PassportNo       string `json:"passport_no,omitempty"`
-	SpecialNeed      bool   `json:"special_need"`
+	SpecialNeed      int64  `json:"special_need"`
 	SpecialNeedsType string `json:"special_needs_type" validate:"required"`
 }
 
@@ -288,7 +288,7 @@ type UpdateStudentPersonalPayload struct {
 	Phone            int64  `json:"phone" validate:"required"`
 	KraPinNo         string `json:"kra_pin_no,omitempty"`
 	PassportNo       string `json:"passport_no,omitempty"`
-	SpecialNeed      bool   `json:"special_need"`
+	SpecialNeed      int64  `json:"special_need"`
 	SpecialNeedsType string `json:"special_needs_type" validate:"required"`
 }
 
@@ -495,6 +495,482 @@ func (a *application) updateStudentInstitutionHandler(w http.ResponseWriter, r *
 	}
 
 	if err := jsonResponse(w, http.StatusCreated, studentInstitutionData); err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+}
+
+// Sponsor
+func (a *application) getStudentSponsorHandler(w http.ResponseWriter, r *http.Request) {
+	student := getStudentFromCtx(r)
+
+	ctx := r.Context()
+
+	studentSponsorData, err := a.store.Students.GetStudentSponsorByID(ctx, student.ID)
+	if err != nil {
+		a.notFoundError(w, r, err)
+		return
+	}
+
+	if err := jsonResponse(w, http.StatusOK, studentSponsorData); err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+}
+
+type StudentSponsorPayload struct {
+	Name               string `json:"name" validate:"required"`
+	SponsorshipType    string `json:"sponsorship_type" validate:"required"`
+	SponsorshipNature  string `json:"sponsorship_nature" validate:"required"`
+	Phone              int64  `json:"phone" validate:"required"`
+	Email              string `json:"email,omitempty"`
+	Address            string `json:"address,omitempty"`
+	ContactPersonName  string `json:"contact_person_name,omitempty"`
+	ContactPersonPhone int64  `json:"contact_person_phone,omitempty"`
+}
+
+func (a *application) createStudentSponsorHandler(w http.ResponseWriter, r *http.Request) {
+	student := getStudentFromCtx(r)
+
+	var payload StudentSponsorPayload
+	if err := readJSON(w, r, &payload); err != nil {
+		a.badRequestError(w, r, err)
+		return
+	}
+
+	if err := Validate.Struct(payload); err != nil {
+		a.badRequestError(w, r, err)
+		return
+	}
+
+	studentSponsorData := &store.StudentSponsor{
+		Name:               payload.Name,
+		SponsorshipType:    payload.SponsorshipType,
+		SponsorshipNature:  payload.SponsorshipNature,
+		Phone:              payload.Phone,
+		Email:              payload.Email,
+		Address:            payload.Address,
+		ContactPersonName:  payload.ContactPersonName,
+		ContactPersonPhone: payload.ContactPersonPhone,
+		StudentID:          student.ID,
+	}
+
+	ctx := r.Context()
+
+	if err := a.store.Students.CreateStudentSponsor(ctx, *studentSponsorData, student.ID); err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+
+	if err := jsonResponse(w, http.StatusCreated, student); err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+}
+
+type UpdateStudentSponsorPayload struct {
+	ID                 int64  `json:"id" validate:"required"`
+	Name               string `json:"name" validate:"required"`
+	SponsorshipType    string `json:"sponsorship_type" validate:"required"`
+	SponsorshipNature  string `json:"sponsorship_nature" validate:"required"`
+	Phone              int64  `json:"phone" validate:"required"`
+	Email              string `json:"email,omitempty"`
+	Address            string `json:"address" validate:"required"`
+	ContactPersonName  string `json:"contact_person_name,omitempty"`
+	ContactPersonPhone int64  `json:"contact_person_phone,omitempty"`
+}
+
+func (a *application) updateStudentSponsorHandler(w http.ResponseWriter, r *http.Request) {
+	student := getStudentFromCtx(r)
+
+	var payload UpdateStudentSponsorPayload
+	if err := readJSON(w, r, &payload); err != nil {
+		a.badRequestError(w, r, err)
+		return
+	}
+
+	if err := Validate.Struct(payload); err != nil {
+		a.badRequestError(w, r, err)
+		return
+	}
+
+	studentSponsorData := &store.StudentSponsor{
+		ID:                 payload.ID,
+		Name:               payload.Name,
+		SponsorshipType:    payload.SponsorshipType,
+		SponsorshipNature:  payload.SponsorshipNature,
+		Phone:              payload.Phone,
+		Email:              payload.Email,
+		Address:            payload.Address,
+		ContactPersonName:  payload.ContactPersonName,
+		ContactPersonPhone: payload.ContactPersonPhone,
+		StudentID:          student.ID,
+		UpdatedAt:          time.Now().String(),
+	}
+
+	ctx := r.Context()
+
+	if err := a.store.Students.UpdateStudentSponsor(ctx, *studentSponsorData, student.ID); err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+
+	if err := jsonResponse(w, http.StatusCreated, studentSponsorData); err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+}
+
+// Emergency
+func (a *application) getStudentEmergencyHandler(w http.ResponseWriter, r *http.Request) {
+	student := getStudentFromCtx(r)
+
+	ctx := r.Context()
+
+	studentEmergencyData, err := a.store.Students.GetStudentEmergencyByID(ctx, student.ID)
+	if err != nil {
+		a.notFoundError(w, r, err)
+		return
+	}
+
+	if err := jsonResponse(w, http.StatusOK, studentEmergencyData); err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+}
+
+type StudentEmergencyPayload struct {
+	Firstname    string `json:"firstname" validate:"required"`
+	Middlename   string `json:"middlename,omitempty"`
+	Lastname     string `json:"lastname" validate:"required"`
+	Phone        int64  `json:"phone" validate:"required"`
+	Email        string `json:"email,omitempty"`
+	IdNumber     int64  `json:"id_number" validate:"required"`
+	Occupation   string `json:"occupation,omitempty"`
+	Relationship string `json:"relationship" validate:"required"`
+	Residence    string `json:"residence" validate:"required"`
+	Town         string `json:"town,omitempty"`
+	WorkPlace    string `json:"work_place,omitempty"`
+	WorkPhone    int64  `json:"work_phone,omitempty"`
+	ProvidedBy   string `json:"provided_by,omitempty"`
+}
+
+func (a *application) createStudentEmergencyHandler(w http.ResponseWriter, r *http.Request) {
+	student := getStudentFromCtx(r)
+
+	var payload StudentEmergencyPayload
+	if err := readJSON(w, r, &payload); err != nil {
+		a.badRequestError(w, r, err)
+		return
+	}
+
+	if err := Validate.Struct(payload); err != nil {
+		a.badRequestError(w, r, err)
+		return
+	}
+
+	studentEmergencyData := &store.StudentEmergency{
+		Firstname:    payload.Firstname,
+		Middlename:   payload.Middlename,
+		Lastname:     payload.Lastname,
+		Phone:        payload.Phone,
+		Email:        payload.Email,
+		IdNumber:     payload.IdNumber,
+		Occupation:   payload.Occupation,
+		Relationship: payload.Relationship,
+		Residence:    payload.Residence,
+		Town:         payload.Town,
+		WorkPlace:    payload.WorkPlace,
+		WorkPhone:    payload.WorkPhone,
+		ProvidedBy:   payload.ProvidedBy,
+		StudentID:    student.ID,
+		UpdatedAt:    time.Now().String(),
+	}
+
+	ctx := r.Context()
+
+	if err := a.store.Students.CreateStudentEmergency(ctx, *studentEmergencyData, student.ID); err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+
+	if err := jsonResponse(w, http.StatusCreated, studentEmergencyData); err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+}
+
+type UpdateStudentEmergencyPayload struct {
+	ID           int64  `json:"id" validate:"required"`
+	Firstname    string `json:"firstname" validate:"required"`
+	Middlename   string `json:"middlename,omitempty"`
+	Lastname     string `json:"lastname" validate:"required"`
+	Phone        int64  `json:"phone" validate:"required"`
+	Email        string `json:"email,omitempty"`
+	IdNumber     int64  `json:"id_number" validate:"required"`
+	Occupation   string `json:"occupation,omitempty"`
+	Relationship string `json:"relationship" validate:"required"`
+	Residence    string `json:"residence" validate:"required"`
+	Town         string `json:"town,omitempty"`
+	WorkPlace    string `json:"work_place,omitempty"`
+	WorkPhone    int64  `json:"work_phone,omitempty"`
+	ProvidedBy   string `json:"provided_by,omitempty"`
+}
+
+func (a *application) updateStudentEmergencyHandler(w http.ResponseWriter, r *http.Request) {
+	student := getStudentFromCtx(r)
+
+	var payload UpdateStudentEmergencyPayload
+	if err := readJSON(w, r, &payload); err != nil {
+		a.badRequestError(w, r, err)
+		return
+	}
+
+	if err := Validate.Struct(payload); err != nil {
+		a.badRequestError(w, r, err)
+		return
+	}
+
+	studentEmergencyData := &store.StudentEmergency{
+		ID:           payload.ID,
+		Firstname:    payload.Firstname,
+		Middlename:   payload.Middlename,
+		Lastname:     payload.Lastname,
+		Phone:        payload.Phone,
+		Email:        payload.Email,
+		IdNumber:     payload.IdNumber,
+		Occupation:   payload.Occupation,
+		Relationship: payload.Relationship,
+		Residence:    payload.Residence,
+		Town:         payload.Town,
+		WorkPlace:    payload.WorkPlace,
+		WorkPhone:    payload.WorkPhone,
+		ProvidedBy:   payload.ProvidedBy,
+		StudentID:    student.ID,
+		UpdatedAt:    time.Now().String(),
+	}
+
+	ctx := r.Context()
+
+	if err := a.store.Students.UpdateStudentEmergency(ctx, *studentEmergencyData, student.ID); err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+
+	if err := jsonResponse(w, http.StatusCreated, studentEmergencyData); err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+}
+
+// Guardians
+func (a *application) getStudentGuardiansHandler(w http.ResponseWriter, r *http.Request) {
+	student := getStudentFromCtx(r)
+
+	ctx := r.Context()
+
+	studentGuardiansData, err := a.store.Students.GetStudentGuardiansByID(ctx, student.ID)
+	if err != nil {
+		a.notFoundError(w, r, err)
+		return
+	}
+
+	if err := jsonResponse(w, http.StatusOK, studentGuardiansData); err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+}
+
+type StudentGuardianPayload struct {
+	Title          string `json:"title" validate:"required"`
+	Firstname      string `json:"firstname" validate:"required"`
+	Lastname       string `json:"lastname" validate:"required"`
+	Middlename     string `json:"middlename,omitempty"`
+	Phone          int64  `json:"phone" validate:"required"`
+	PhoneAlternate *int64 `json:"phone_alternate,omitempty"`
+	Email          string `json:"email,omitempty"`
+	IdNumber       int64  `json:"id_number" validate:"required"`
+	KraPinNo       string `json:"kra_pin_no,omitempty"`
+	PassportNo     string `json:"passport_no,omitempty"`
+	AlienNo        string `json:"alien_no,omitempty"`
+	Occupation     string `json:"occupation,omitempty"`
+	WorkLocation   string `json:"work_location,omitempty"`
+	WorkPhone      *int64 `json:"work_phone,omitempty"`
+	Relationship   string `json:"relationship" validate:"required"`
+	Address        string `json:"address,omitempty"`
+	Residence      string `json:"residence" validate:"required"`
+	Town           string `json:"town" validate:"required"`
+	County         string `json:"county" validate:"required"`
+	SubCounty      string `json:"sub_county" validate:"required"`
+	Ward           string `json:"ward,omitempty"`
+	VotersCardNo   string `json:"voters_card_no,omitempty"`
+	PollingStation string `json:"polling_station,omitempty"`
+}
+
+func (a *application) createStudentGuardiansHandler(w http.ResponseWriter, r *http.Request) {
+	student := getStudentFromCtx(r)
+
+	var payload StudentGuardianPayload
+	if err := readJSON(w, r, &payload); err != nil {
+		a.badRequestError(w, r, err)
+		return
+	}
+
+	if err := Validate.Struct(payload); err != nil {
+		a.badRequestError(w, r, err)
+		return
+	}
+
+	studentGuardianData := &store.StudentGuardian{
+		Title:          payload.Title,
+		Firstname:      payload.Firstname,
+		Middlename:     payload.Middlename,
+		Lastname:       payload.Lastname,
+		Phone:          payload.Phone,
+		PhoneAlternate: payload.PhoneAlternate,
+		Email:          payload.Email,
+		IdNumber:       payload.IdNumber,
+		KraPinNo:       payload.KraPinNo,
+		PassportNo:     payload.PassportNo,
+		AlienNo:        payload.AlienNo,
+		Occupation:     payload.Occupation,
+		WorkLocation:   payload.WorkLocation,
+		WorkPhone:      payload.WorkPhone,
+		Relationship:   payload.Relationship,
+		Address:        payload.Address,
+		Residence:      payload.Residence,
+		Town:           payload.Town,
+		County:         payload.County,
+		SubCounty:      payload.SubCounty,
+		Ward:           payload.Ward,
+		VotersCardNo:   payload.VotersCardNo,
+		PollingStation: payload.PollingStation,
+		StudentID:      student.ID,
+		UpdatedAt:      time.Now().String(),
+	}
+
+	ctx := r.Context()
+
+	if err := a.store.Students.CreateStudentGuardian(ctx, *studentGuardianData, student.ID); err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+
+	if err := jsonResponse(w, http.StatusCreated, studentGuardianData); err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+}
+
+type UpdateStudentGuardianPayload struct {
+	ID             int64  `json:"id" validate:"required"`
+	Title          string `json:"title" validate:"required"`
+	Firstname      string `json:"firstname" validate:"required"`
+	Middlename     string `json:"middlename,omitempty"`
+	Lastname       string `json:"lastname" validate:"required"`
+	Phone          int64  `json:"phone" validate:"required"`
+	PhoneAlternate *int64 `json:"phone_alternate,omitempty"`
+	Email          string `json:"email,omitempty"`
+	IdNumber       int64  `json:"id_number" validate:"required"`
+	KraPinNo       string `json:"kra_pin_no,omitempty"`
+	PassportNo     string `json:"passport_no,omitempty"`
+	AlienNo        string `json:"alien_no,omitempty"`
+	Occupation     string `json:"occupation,omitempty"`
+	WorkLocation   string `json:"work_location,omitempty"`
+	WorkPhone      *int64 `json:"work_phone,omitempty"`
+	Relationship   string `json:"relationship" validate:"required"`
+	Address        string `json:"address,omitempty"`
+	Residence      string `json:"residence" validate:"required"`
+	Town           string `json:"town,omitempty"`
+	County         string `json:"county,omitempty"`
+	SubCounty      string `json:"sub_county,omitempty"`
+	Ward           string `json:"ward,omitempty"`
+	VotersCardNo   string `json:"voters_card_no,omitempty"`
+	PollingStation string `json:"polling_station,omitempty"`
+}
+
+func (a *application) updateStudentGuardiansHandler(w http.ResponseWriter, r *http.Request) {
+	student := getStudentFromCtx(r)
+
+	var payload UpdateStudentGuardianPayload
+	if err := readJSON(w, r, &payload); err != nil {
+		a.badRequestError(w, r, err)
+		return
+	}
+
+	if err := Validate.Struct(payload); err != nil {
+		a.badRequestError(w, r, err)
+		return
+	}
+
+	studentGuardianData := &store.StudentGuardian{
+		ID:             payload.ID,
+		Title:          payload.Title,
+		Firstname:      payload.Firstname,
+		Middlename:     payload.Middlename,
+		Lastname:       payload.Lastname,
+		Phone:          payload.Phone,
+		PhoneAlternate: payload.PhoneAlternate,
+		Email:          payload.Email,
+		IdNumber:       payload.IdNumber,
+		KraPinNo:       payload.KraPinNo,
+		PassportNo:     payload.PassportNo,
+		AlienNo:        payload.AlienNo,
+		Occupation:     payload.Occupation,
+		WorkLocation:   payload.WorkLocation,
+		WorkPhone:      payload.WorkPhone,
+		Relationship:   payload.Relationship,
+		Address:        payload.Address,
+		Residence:      payload.Residence,
+		Town:           payload.Town,
+		County:         payload.County,
+		SubCounty:      payload.SubCounty,
+		Ward:           payload.Ward,
+		VotersCardNo:   payload.VotersCardNo,
+		PollingStation: payload.PollingStation,
+		StudentID:      student.ID,
+		UpdatedAt:      time.Now().String(),
+	}
+
+	ctx := r.Context()
+
+	if err := a.store.Students.UpdateStudentGuardian(ctx, *studentGuardianData, student.ID); err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+
+	if err := jsonResponse(w, http.StatusCreated, studentGuardianData); err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+}
+
+type DeleteStudentGuardianPayload struct {
+	ID int64 `json:"id" validate:"required"`
+}
+
+func (a *application) deleteStudentGuardiansHandler(w http.ResponseWriter, r *http.Request) {
+	student := getStudentFromCtx(r)
+
+	var payload DeleteStudentGuardianPayload
+	if err := readJSON(w, r, &payload); err != nil {
+		a.badRequestError(w, r, err)
+		return
+	}
+
+	if err := Validate.Struct(payload); err != nil {
+		a.badRequestError(w, r, err)
+		return
+	}
+
+	ctx := r.Context()
+
+	if err := a.store.Students.DeleteStudentGuardian(ctx, payload.ID, student.ID); err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+
+	if err := jsonResponse(w, http.StatusNoContent, ""); err != nil {
 		a.internalServerError(w, r, err)
 		return
 	}

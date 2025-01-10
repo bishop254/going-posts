@@ -133,6 +133,19 @@ func (a *application) mount() http.Handler {
 				r.Get("/institution", a.getStudentInstitutionHandler)
 				r.Post("/institution", a.createStudentInstitutionHandler)
 				r.Put("/institution", a.updateStudentInstitutionHandler)
+
+				r.Get("/sponsor", a.getStudentSponsorHandler)
+				r.Post("/sponsor", a.createStudentSponsorHandler)
+				r.Put("/sponsor", a.updateStudentSponsorHandler)
+
+				r.Get("/guardians", a.getStudentGuardiansHandler)
+				r.Post("/guardians", a.createStudentGuardiansHandler)
+				r.Put("/guardians", a.updateStudentGuardiansHandler)
+				r.Post("/guardian/delete", a.deleteStudentGuardiansHandler)
+
+				r.Get("/emergency", a.getStudentEmergencyHandler)
+				r.Post("/emergency", a.createStudentEmergencyHandler)
+				r.Put("/emergency", a.updateStudentEmergencyHandler)
 			})
 		})
 	})

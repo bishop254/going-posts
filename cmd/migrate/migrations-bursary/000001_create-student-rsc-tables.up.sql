@@ -9,9 +9,9 @@ CREATE TABLE
         "blocked" BOOLEAN NOT NULL,
         "first_time_login" BOOLEAN NOT NULL,
         "activated" BOOLEAN NOT NULL,
-        "created_at" TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT NOW (),
-        "updated_at" TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT NOW (),
-        "role_id" INT DEFAULT 1
+        "created_at" TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
+        "updated_at" TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
+        "role_id" INT NULL
     );
 
 ALTER TABLE "students" ADD PRIMARY KEY ("id");
@@ -27,7 +27,7 @@ CREATE TABLE
         "religion" VARCHAR(255) NOT NULL,
         "parental_status" VARCHAR(255) NOT NULL,
         "birth_cert_no" VARCHAR(255) NULL,
-        "birth_town" VARCHAR(255) NULL ,
+        "birth_town" VARCHAR(255) NULL,
         "birth_county" VARCHAR(255) NOT NULL,
         "birth_sub_county" VARCHAR(255) NOT NULL,
         "ward" VARCHAR(255) NOT NULL,
@@ -38,8 +38,8 @@ CREATE TABLE
         "kra_pin_no" VARCHAR(255) NULL,
         "passport_no" VARCHAR(255) NULL,
         "special_need" INT NOT NULL DEFAULT 0,
-        "special_needs_type" VARCHAR(255) NULL DEFAULT "N/A",
-        "student_id" bigserial NOT NULL
+        "special_needs_type" VARCHAR(255) NULL,
+        "student_id" bigserial NOT NULL UNIQUE
     );
 
 ALTER TABLE "students_personal" ADD PRIMARY KEY ("id");
@@ -60,7 +60,8 @@ CREATE TABLE
         "year_joined" BIGINT NOT NULL,
         "curr_class_level" VARCHAR(255) NOT NULL,
         "adm_no" VARCHAR(255) NOT NULL,
-        "student_id" bigserial NOT NULL,
+        "student_id" bigserial NOT NULL UNIQUE,
+        "updated_at" TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT NOW (),
         "bank_name" VARCHAR(255) NOT NULL,
         "bank_branch" VARCHAR(255) NOT NULL,
         "bank_acc_name" VARCHAR(255) NOT NULL,
@@ -94,8 +95,9 @@ CREATE TABLE
         "sub_county" VARCHAR(255) NOT NULL,
         "ward" VARCHAR(255) NULL,
         "voters_card_no" VARCHAR(255) NULL,
-        "polling_station" BIGINT NULL,
-        "student_id" bigserial NOT NULL
+        "polling_station" VARCHAR(255) NULL,
+        "student_id" bigserial NOT NULL,
+        "updated_at" TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
     );
 
 ALTER TABLE "students_guardian" ADD PRIMARY KEY ("id");
@@ -109,7 +111,8 @@ CREATE TABLE
         "fees" BIGINT NOT NULL,
         "paid" BOOLEAN NOT NULL,
         "balance" BIGINT NOT NULL,
-        "student_id" bigserial NOT NULL
+        "student_id" bigserial NOT NULL,
+        "updated_at" TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
     );
 
 ALTER TABLE "students_siblings" ADD PRIMARY KEY ("id");
@@ -125,7 +128,8 @@ CREATE TABLE
         "address" VARCHAR(255) NULL,
         "contact_person_name" VARCHAR(255) NULL,
         "contact_person_phone" BIGINT NULL,
-        "student_id" bigserial NOT NULL
+        "student_id" bigserial NOT NULL UNIQUE,
+        "updated_at" TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
     );
 
 ALTER TABLE "students_sponsor" ADD PRIMARY KEY ("id");
@@ -146,7 +150,8 @@ CREATE TABLE
         "work_place" VARCHAR(255) NULL,
         "work_phone" BIGINT NULL,
         "provided_by" VARCHAR(255) NULL,
-        "student_id" bigserial NOT NULL
+        "student_id" bigserial NOT NULL UNIQUE,
+        "updated_at" TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
     );
 
 ALTER TABLE "students_emergency" ADD PRIMARY KEY ("id");
