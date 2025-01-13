@@ -13,7 +13,6 @@ import (
 	"go.uber.org/zap"
 )
 
-// Create a struct for our server configurations
 type application struct {
 	config        config
 	store         store.Storage
@@ -127,6 +126,26 @@ func (a *application) mount() http.Handler {
 	})
 
 	r.Route("/v8", func(r chi.Router) {
+		//Admin
+		r.Route("/auth-adm", func(r chi.Router) {
+			r.With(a.BasicAuthMiddleware()).Post("/login", a.loginAdminHandler)
+			r.Post("/register", a.registerAdminHandler)
+		})
+
+		r.Route("/admins", func(r chi.Router) {
+			r.Route("/activate/{token}", func(r chi.Router) {
+				r.Get("/", a.activateAdminHandler)
+			})
+
+			r.Route("/bursary", func(r chi.Router) {
+				r.Use(a.JWTAuthMiddleware())
+				r.Get("/", a.getBursariesHandler)
+				r.Post("/", a.createBursaryHandler)
+				r.Put("/", a.updateBursaryHandler)
+			})
+		})
+
+		//Students
 		r.Route("/auth", func(r chi.Router) {
 			r.Post("/register", a.registerStudentHandler)
 			r.With(a.BasicAuthMiddleware()).Post("/login", a.loginStudentHandler)
@@ -135,6 +154,12 @@ func (a *application) mount() http.Handler {
 		r.Route("/students", func(r chi.Router) {
 			r.Route("/activate/{token}", func(r chi.Router) {
 				r.Get("/", a.activateStudentHandler)
+			})
+
+			r.Route("/bursary", func(r chi.Router) {
+				r.Use(a.JWTStudentAuthMiddleware())
+				r.Get("/", a.getBursariesHandler)
+				r.Get("/{bursaryID}", a.getBursaryByIDHandler)
 			})
 
 			r.Route("/{studentId}", func(r chi.Router) {
@@ -162,6 +187,8 @@ func (a *application) mount() http.Handler {
 
 				//TODO : finish doc upload, make it a for loop and dynamic based on the multiple files being uploaded
 				r.Post("/documents", a.uploadDocumentsHandler)
+
+				r.Post("/application", a.uploadDocumentsHandler)
 			})
 		})
 	})

@@ -1257,3 +1257,31 @@ func (s *StudentsStore) DeleteStudentGuardian(ctx context.Context, guardianId in
 
 	return nil
 }
+
+func (s *StudentsStore) CreateStudentApplication(ctx context.Context, bursaryID int64, studentID int64) error {
+	query := `
+	INSERT INTO applications (
+		 bursary_id, student_id, stage, created_at, updated_at
+	)
+	VALUES ($1, $2, $3, $4, $5);
+	`
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
+
+	_, err := s.db.ExecContext(
+		ctx,
+		query,
+		bursaryID,
+		studentID,
+		"submitted",
+		time.Now(),
+		time.Now(),
+	)
+	fmt.Println(query)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

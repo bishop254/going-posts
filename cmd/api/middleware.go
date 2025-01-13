@@ -39,7 +39,7 @@ func (a *application) JWTAuthMiddleware() func(http.Handler) http.Handler {
 			}
 
 			claims, _ := tokenString.Claims.(jwt.MapClaims)
-			userId, err := strconv.ParseInt(fmt.Sprintf("%.f", claims["sub"]), 10, 64)
+			adminID, err := strconv.ParseInt(fmt.Sprintf("%.f", claims["sub"]), 10, 64)
 			if err != nil {
 				a.unauthorizedError(w, r, err)
 				return
@@ -47,13 +47,13 @@ func (a *application) JWTAuthMiddleware() func(http.Handler) http.Handler {
 
 			ctx := r.Context()
 
-			user, err := a.store.Users.GetOne(ctx, userId)
+			admin, err := a.store.Admins.GetOneByID(ctx, adminID)
 			if err != nil {
 				a.unauthorizedError(w, r, err)
 				return
 			}
 
-			ctx = context.WithValue(ctx, userCtx, user)
+			ctx = context.WithValue(ctx, adminCtx, admin)
 
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})

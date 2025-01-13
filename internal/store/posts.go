@@ -150,18 +150,18 @@ func (s *PostStore) Update(ctx context.Context, post *Post) error {
 
 func (s *PostStore) GetUserFeed(ctx context.Context, id int64, fq *PaginatedFeedQuery) ([]PostWithMetadata, error) {
 	var tagsCondition string
-	if len(fq.Tags) > 0 {
-		tagsCondition = "(posts.tags ILIKE ANY (ARRAY["
-		for i, tag := range fq.Tags {
-			tagsCondition += "'" + "%" + tag + "%" + "'"
-			if i < len(fq.Tags)-1 {
-				tagsCondition += ", "
-			}
-		}
-		tagsCondition += "]))"
-	} else {
-		tagsCondition = "(posts.tags ILIKE ANY (ARRAY['%%']))"
-	}
+	// if len(fq.Tags) > 0 {
+	// 	tagsCondition = "(posts.tags ILIKE ANY (ARRAY["
+	// 	for i, tag := range fq.Tags {
+	// 		tagsCondition += "'" + "%" + tag + "%" + "'"
+	// 		if i < len(fq.Tags)-1 {
+	// 			tagsCondition += ", "
+	// 		}
+	// 	}
+	// 	tagsCondition += "]))"
+	// } else {
+	tagsCondition = "(posts.tags ILIKE ANY (ARRAY['%%']))"
+	// }
 
 	query := `
 	 	SELECT 

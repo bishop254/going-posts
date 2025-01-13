@@ -11,7 +11,7 @@ CREATE TABLE
         "activated" BOOLEAN NOT NULL,
         "created_at" TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
         "updated_at" TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
-        "role_id" INT NULL
+        "role_id" INT NULL DEFAULT 0
     );
 
 ALTER TABLE "students" ADD PRIMARY KEY ("id");
@@ -39,7 +39,7 @@ CREATE TABLE
         "passport_no" VARCHAR(255) NULL,
         "special_need" INT NOT NULL DEFAULT 0,
         "special_needs_type" VARCHAR(255) NULL,
-        "student_id" bigserial NOT NULL UNIQUE
+        "student_id" BIGINT NOT NULL UNIQUE
     );
 
 ALTER TABLE "students_personal" ADD PRIMARY KEY ("id");
@@ -60,7 +60,7 @@ CREATE TABLE
         "year_joined" BIGINT NOT NULL,
         "curr_class_level" VARCHAR(255) NOT NULL,
         "adm_no" VARCHAR(255) NOT NULL,
-        "student_id" bigserial NOT NULL UNIQUE,
+        "student_id" BIGINT NOT NULL UNIQUE,
         "updated_at" TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT NOW (),
         "bank_name" VARCHAR(255) NOT NULL,
         "bank_branch" VARCHAR(255) NOT NULL,
@@ -96,7 +96,7 @@ CREATE TABLE
         "ward" VARCHAR(255) NULL,
         "voters_card_no" VARCHAR(255) NULL,
         "polling_station" VARCHAR(255) NULL,
-        "student_id" bigserial NOT NULL,
+        "student_id" BIGINT NOT NULL,
         "updated_at" TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
     );
 
@@ -111,7 +111,7 @@ CREATE TABLE
         "fees" BIGINT NOT NULL,
         "paid" BOOLEAN NOT NULL,
         "balance" BIGINT NOT NULL,
-        "student_id" bigserial NOT NULL,
+        "student_id" BIGINT NOT NULL,
         "updated_at" TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
     );
 
@@ -128,7 +128,7 @@ CREATE TABLE
         "address" VARCHAR(255) NULL,
         "contact_person_name" VARCHAR(255) NULL,
         "contact_person_phone" BIGINT NULL,
-        "student_id" bigserial NOT NULL UNIQUE,
+        "student_id" BIGINT NOT NULL UNIQUE,
         "updated_at" TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
     );
 
@@ -150,7 +150,7 @@ CREATE TABLE
         "work_place" VARCHAR(255) NULL,
         "work_phone" BIGINT NULL,
         "provided_by" VARCHAR(255) NULL,
-        "student_id" bigserial NOT NULL UNIQUE,
+        "student_id" BIGINT NOT NULL UNIQUE,
         "updated_at" TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
     );
 

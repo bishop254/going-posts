@@ -33,6 +33,7 @@ type Storage struct {
 		Create(context.Context, *Comment) error
 		GetPostWithCommentsByID(context.Context, int64) ([]Comment, error)
 	}
+
 	Students interface {
 		RegisterAndInvite(context.Context, *Student, string, time.Duration) error
 		RollBackNewStudent(context.Context, int64, string) error
@@ -60,16 +61,38 @@ type Storage struct {
 		CreateStudentGuardian(context.Context, StudentGuardian, int64) error
 		UpdateStudentGuardian(context.Context, StudentGuardian, int64) error
 		DeleteStudentGuardian(context.Context, int64, int64) error
+
+		CreateStudentApplication(context.Context, int64, int64) error
+	}
+
+	Admins interface {
+		RegisterAndInvite(context.Context, *Admin, string, time.Duration) error
+		RollBackNewAdmin(context.Context, int64, string) error
+		Activate(context.Context, string) error
+		GetOneByEmail(context.Context, string) (*Admin, error)
+		GetOneByID(context.Context, int64) (*Admin, error)
+	}
+
+	Bursaries interface {
+		GetBursariesAndCount(context.Context, *PaginatedFeedQuery) (*BursariesWithMetadata, error)
+		GetBursaries(context.Context, *sql.Tx, *PaginatedFeedQuery) ([]Bursary, error)
+		GetBursaryApplications(context.Context, int64, int64) ([]BursaryWithMetadata, error)
+		// GetBursaryByID(context.Context, int64) (*Bursary, error)
+		GetBursariesCount(context.Context, *sql.Tx, *PaginatedFeedQuery) (int64, error)
+		CreateBursary(context.Context, Bursary) error
+		UpdateBursary(context.Context, Bursary) error
 	}
 }
 
 func NewStorage(db *sql.DB) Storage {
 	return Storage{
-		Posts:    &PostStore{db},
-		Users:    &UserStore{db},
-		Comments: &CommentStore{db},
-		Roles:    &RolesStore{db},
-		Students: &StudentsStore{db},
+		Posts:     &PostStore{db},
+		Users:     &UserStore{db},
+		Comments:  &CommentStore{db},
+		Roles:     &RolesStore{db},
+		Students:  &StudentsStore{db},
+		Admins:    &AdminsStore{db},
+		Bursaries: &BursariesStore{db},
 	}
 }
 

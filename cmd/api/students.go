@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/bishop254/bursary/internal/mailer"
@@ -115,7 +116,7 @@ type LoginStudentPayload struct {
 }
 
 func (a *application) loginStudentHandler(w http.ResponseWriter, r *http.Request) {
-	var payload LoginStudentPayload
+	var payload LoginAdminPayload
 	if err := readJSON(w, r, &payload); err != nil {
 		a.badRequestError(w, r, err)
 		return
@@ -1074,6 +1075,60 @@ func (a *application) uploadDocumentsHandler(w http.ResponseWriter, r *http.Requ
 	}
 
 	if err := jsonResponse(w, http.StatusCreated, uploadResp); err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+}
+
+type CreateStudentApplicationPayload struct {
+	BusraryID int64 `json:"bursary_id" validate:"required"`
+}
+
+func (a *application) CreateStudentApplicationHandler(w http.ResponseWriter, r *http.Request) {
+	student := getStudentFromCtx(r)
+
+	var payload CreateStudentApplicationPayload
+	if err := readJSON(w, r, &payload); err != nil {
+		a.badRequestError(w, r, err)
+		return
+	}
+
+	if err := Validate.Struct(payload); err != nil {
+		a.badRequestError(w, r, err)
+		return
+	}
+
+	ctx := r.Context()
+
+	if err := a.store.Students.CreateStudentApplication(ctx, payload.BusraryID, student.ID); err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+
+	if err := jsonResponse(w, http.StatusCreated, ""); err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+}
+
+func (a *application) getBursaryByIDHandler(w http.ResponseWriter, r *http.Request) {
+	bursaryParam := chi.URLParam(r, "bursaryID")
+	bursaryID, err := strconv.Atoi(bursaryParam)
+	if err != nil {
+		a.badRequestError(w, r, err)
+		return
+	}
+	student := getStudentFromCtx(r)
+
+	ctx := r.Context()
+
+	bursaryData, err := a.store.Bursaries.GetBursaryApplications(ctx, int64(bursaryID), student.ID)
+	if err != nil {
+		a.notFoundError(w, r, err)
+		return
+	}
+
+	if err := jsonResponse(w, http.StatusOK, bursaryData); err != nil {
 		a.internalServerError(w, r, err)
 		return
 	}

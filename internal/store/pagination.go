@@ -3,18 +3,17 @@ package store
 import (
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 )
 
 type PaginatedFeedQuery struct {
-	Limit  int      `json:"limit" validate:"gte=1,lte=170"`
-	Offset int      `json:"offset" validate:"gte=0"`
-	Sort   string   `json:"sort" validate:"oneof=asc desc"`
-	Tags   []string `json:"tags" validate:"max=5`
-	Search string   `json:"search" validate:"max=50"`
-	Since  string   `json:"since"`
-	Until  string   `json:"until"`
+	Limit          int    `json:"limit" validate:"gte=1,lte=170"`
+	Offset         int    `json:"offset" validate:"gte=0"`
+	Sort           string `json:"sort" validate:"oneof=asc desc"`
+	Search         string `json:"search" validate:"max=50"`
+	AllocationType string `json:"allocation_type" validate:"max=50"`
+	Since          string `json:"since"`
+	Until          string `json:"until"`
 }
 
 func (fq *PaginatedFeedQuery) Parse(r *http.Request) (*PaginatedFeedQuery, error) {
@@ -48,14 +47,14 @@ func (fq *PaginatedFeedQuery) Parse(r *http.Request) (*PaginatedFeedQuery, error
 		fq.Sort = "desc"
 	}
 
-	tags := queryString.Get("tags")
-	if tags != "" {
-		fq.Tags = strings.Split(tags, ",")
-	}
-
 	search := queryString.Get("search")
 	if search != "" {
 		fq.Search = search
+	}
+
+	allocationType := queryString.Get("allocation_type")
+	if allocationType != "" {
+		fq.AllocationType = allocationType
 	}
 
 	since := queryString.Get("since")
