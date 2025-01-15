@@ -1285,3 +1285,92 @@ func (s *StudentsStore) CreateStudentApplication(ctx context.Context, bursaryID 
 
 	return nil
 }
+
+func (s *StudentsStore) WithdrawStudentApplication(ctx context.Context, bursaryID int64, studentID int64) error {
+	query := `
+	UPDATE applications 
+		SET soft_delete = true, updated_at = $3
+		WHERE bursary_id = $1 AND student_id = $2
+		;
+	`
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
+
+	_, err := s.db.ExecContext(
+		ctx,
+		query,
+		bursaryID,
+		studentID,
+		time.Now(),
+	)
+	fmt.Println(query)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *StudentsStore) GetStudentApplications(ctx context.Context, studentID int64) ([]BursaryWithMetadata, error) {
+	query := `
+	SELECT 		 
+		applications.id,
+		applications.bursary_id, applications.student_id, 
+		applications.stage, applications.remarks, 
+		applications.soft_delete, applications.created_at, 
+		applications.updated_at,
+		bursaries.id,
+		bursaries.bursary_name,
+		bursaries.end_date
+ 	FROM applications
+	JOIN bursaries ON bursaries.id = applications.bursary_id
+	WHERE applications.student_id = $1
+	;
+	`
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
+
+	applicationData := []BursaryWithMetadata{}
+
+	rows, err := s.db.QueryContext(
+		ctx,
+		query,
+		studentID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		appl := Application{}
+		burs := Bursary{}
+		data := BursaryWithMetadata{}
+
+		err := rows.Scan(
+			&appl.ID,
+			&appl.BursaryID,
+			&appl.StudentID,
+			&appl.Stage,
+			&appl.Remarks,
+			&appl.SoftDelete,
+			&appl.CreatedAt,
+			&appl.UpdatedAt,
+			&burs.ID,
+			&burs.BursaryName,
+			&burs.EndDate,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		data.Bursary = burs
+		data.Application = appl
+
+		applicationData = append(applicationData, data)
+	}
+
+	return applicationData, nil
+}

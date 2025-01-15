@@ -63,6 +63,8 @@ type Storage struct {
 		DeleteStudentGuardian(context.Context, int64, int64) error
 
 		CreateStudentApplication(context.Context, int64, int64) error
+		WithdrawStudentApplication(context.Context, int64, int64) error
+		GetStudentApplications(context.Context, int64) ([]BursaryWithMetadata, error)
 	}
 
 	Admins interface {

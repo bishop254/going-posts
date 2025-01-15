@@ -81,19 +81,3 @@ CREATE TABLE
         "updated_at" TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
         PRIMARY KEY ("id")
     );
-
--- ALTER TABLE "applications"
---     ADD CONSTRAINT FK_USER FOREIGN KEY (
---         "student_id"
---     )
---         REFERENCES "students"(
---             "id"
---         );
-
--- ALTER TABLE "applications"
---     ADD CONSTRAINT FK_USER FOREIGN KEY (
---         "bursary_id"
---     )
---         REFERENCES "bursaries"(
---             "id"
---         );

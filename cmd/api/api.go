@@ -188,7 +188,9 @@ func (a *application) mount() http.Handler {
 				//TODO : finish doc upload, make it a for loop and dynamic based on the multiple files being uploaded
 				r.Post("/documents", a.uploadDocumentsHandler)
 
-				r.Post("/application", a.uploadDocumentsHandler)
+				r.Post("/application", a.createStudentApplicationHandler)
+				r.Put("/application", a.withdrawStudentApplicationHandler)
+				r.Get("/applications", a.getStudentApplicationsHandler)
 			})
 		})
 	})

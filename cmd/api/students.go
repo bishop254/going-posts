@@ -1084,7 +1084,7 @@ type CreateStudentApplicationPayload struct {
 	BusraryID int64 `json:"bursary_id" validate:"required"`
 }
 
-func (a *application) CreateStudentApplicationHandler(w http.ResponseWriter, r *http.Request) {
+func (a *application) createStudentApplicationHandler(w http.ResponseWriter, r *http.Request) {
 	student := getStudentFromCtx(r)
 
 	var payload CreateStudentApplicationPayload
@@ -1106,6 +1106,54 @@ func (a *application) CreateStudentApplicationHandler(w http.ResponseWriter, r *
 	}
 
 	if err := jsonResponse(w, http.StatusCreated, ""); err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+}
+
+type WithdrawStudentApplicationPayload struct {
+	BusraryID int64 `json:"bursary_id" validate:"required"`
+}
+
+func (a *application) withdrawStudentApplicationHandler(w http.ResponseWriter, r *http.Request) {
+	student := getStudentFromCtx(r)
+
+	var payload WithdrawStudentApplicationPayload
+	if err := readJSON(w, r, &payload); err != nil {
+		a.badRequestError(w, r, err)
+		return
+	}
+
+	if err := Validate.Struct(payload); err != nil {
+		a.badRequestError(w, r, err)
+		return
+	}
+
+	ctx := r.Context()
+
+	if err := a.store.Students.WithdrawStudentApplication(ctx, payload.BusraryID, student.ID); err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+
+	if err := jsonResponse(w, http.StatusAccepted, ""); err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+}
+
+func (a *application) getStudentApplicationsHandler(w http.ResponseWriter, r *http.Request) {
+	student := getStudentFromCtx(r)
+
+	ctx := r.Context()
+
+	applications, err := a.store.Students.GetStudentApplications(ctx, student.ID)
+	if err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+
+	if err := jsonResponse(w, http.StatusOK, applications); err != nil {
 		a.internalServerError(w, r, err)
 		return
 	}
