@@ -150,6 +150,11 @@ func (a *application) mount() http.Handler {
 				// r.Post("/", a.createAdminUserHandler)
 				// r.Put("/", a.updateAdminUserHandler)
 			})
+
+			r.Route("/roles", func(r chi.Router) {
+				r.Use(a.JWTAuthMiddleware())
+				r.Get("/", a.getRolesHandler)
+			})
 		})
 
 		//Students

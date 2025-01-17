@@ -363,3 +363,45 @@ func (s *AdminsStore) GetAdminUsers(ctx context.Context, pq *PaginatedAdminUserQ
 
 	return adminList, nil
 }
+
+func (s *AdminsStore) GetRoles(ctx context.Context) ([]Role, error) {
+	//TODO : add query parameters
+	query := `
+		SELECT id, name, description, level 
+		FROM roles
+	`
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
+	defer cancel()
+
+	rows, err := s.db.QueryContext(ctx, query)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return nil, errors.New("roles not found")
+		default:
+			return nil, err
+		}
+	}
+	defer rows.Close()
+
+	roleList := []Role{}
+	for rows.Next() {
+		var rl Role
+
+		err := rows.Scan(
+			&rl.ID,
+			&rl.Name,
+			&rl.Description,
+			&rl.Level,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		roleList = append(roleList, rl)
+	}
+
+	return roleList, nil
+}

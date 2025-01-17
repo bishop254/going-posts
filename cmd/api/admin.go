@@ -36,7 +36,7 @@ func (a *application) loginAdminHandler(w http.ResponseWriter, r *http.Request) 
 
 	admin, err := a.store.Admins.GetOneByEmail(ctx, payload.Email)
 	if err != nil {
-		a.unauthorizedError(w, r, err)
+		a.unauthorizedError(w, r, errors.New("invalid username/password"))
 		return
 	}
 
@@ -320,6 +320,21 @@ func (a *application) getAdminUsersHandler(w http.ResponseWriter, r *http.Reques
 	ctx := r.Context()
 
 	adminUsersListing, err := a.store.Admins.GetAdminUsers(ctx, adminUserQuery)
+	if err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+
+	if err := jsonResponse(w, http.StatusAccepted, adminUsersListing); err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+}
+
+func (a *application) getRolesHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	adminUsersListing, err := a.store.Admins.GetRoles(ctx)
 	if err != nil {
 		a.internalServerError(w, r, err)
 		return
