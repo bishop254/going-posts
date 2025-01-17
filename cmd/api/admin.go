@@ -85,13 +85,13 @@ func (a *application) loginAdminHandler(w http.ResponseWriter, r *http.Request) 
 }
 
 type RegisterAdminPayload struct {
-	Firstname  string `json:"firstname" validate:"required"`
-	Middlename string `json:"middlename"`
-	Lastname   string `json:"lastname" validate:"required"`
-	Email      string `json:"email" validate:"required,email"`
-	Password   string `json:"password" validate:"required,min=8"`
-	Role       int64  `json:"role" validate:"required"`
-	RoleCode   string `json:"role_code" validate:"required"`
+	Firstname  string  `json:"firstname" validate:"required"`
+	Middlename *string `json:"middlename"`
+	Lastname   string  `json:"lastname" validate:"required"`
+	Email      string  `json:"email" validate:"required,email"`
+	Password   string  `json:"password" validate:"required,min=8"`
+	Role       int64   `json:"role" validate:"required"`
+	RoleCode   string  `json:"role_code" validate:"required"`
 }
 
 func (a *application) registerAdminHandler(w http.ResponseWriter, r *http.Request) {
@@ -294,6 +294,38 @@ func (a *application) updateBursaryHandler(w http.ResponseWriter, r *http.Reques
 	}
 
 	if err := jsonResponse(w, http.StatusAccepted, bursary); err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+}
+
+func (a *application) getAdminUsersHandler(w http.ResponseWriter, r *http.Request) {
+	adminUserQuery := &store.PaginatedAdminUserQuery{
+		Limit:  10,
+		Offset: 10,
+		Sort:   "desc",
+	}
+
+	adminUserQuery, err := adminUserQuery.ParseAdminUser(r)
+	if err != nil {
+		a.badRequestError(w, r, err)
+		return
+	}
+
+	if err := Validate.Struct(adminUserQuery); err != nil {
+		a.badRequestError(w, r, err)
+		return
+	}
+
+	ctx := r.Context()
+
+	adminUsersListing, err := a.store.Admins.GetAdminUsers(ctx, adminUserQuery)
+	if err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+
+	if err := jsonResponse(w, http.StatusAccepted, adminUsersListing); err != nil {
 		a.internalServerError(w, r, err)
 		return
 	}

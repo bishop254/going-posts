@@ -15,7 +15,7 @@ type AdminsStore struct {
 type Admin struct {
 	ID             int64    `json: "id"`
 	Firstname      string   `json: "firstname"`
-	Middlename     string   `json: "middlename"`
+	Middlename     *string  `json: "middlename"`
 	Lastname       string   `json: "lastname"`
 	Email          string   `json: "email"`
 	Password       password `json: "-"`
@@ -25,7 +25,7 @@ type Admin struct {
 	CreatedAt      string   `json: "created_at"`
 	UpdatedAt      string   `json: "updated_at"`
 	Role           Role     `json:"role"`
-	RoleCode       string   `json:"role_code"`
+	RoleCode       *string  `json:"role_code"`
 }
 
 type AdminInvitation struct {
@@ -312,4 +312,54 @@ func (s *AdminsStore) GetOneByID(ctx context.Context, adminID int64) (*Admin, er
 	}
 
 	return admin, nil
+}
+
+func (s *AdminsStore) GetAdminUsers(ctx context.Context, pq *PaginatedAdminUserQuery) ([]Admin, error) {
+	//TODO : add query parameters
+	query := `
+		SELECT 
+		 id, email, firstname, middlename, lastname, blocked,
+		 role_id, role_code, created_at, updated_at 
+		FROM system_users WHERE activated = true
+	`
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
+	defer cancel()
+
+	rows, err := s.db.QueryContext(ctx, query)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return nil, errors.New("admins not found")
+		default:
+			return nil, err
+		}
+	}
+	defer rows.Close()
+
+	adminList := []Admin{}
+	for rows.Next() {
+		var admin Admin
+
+		err := rows.Scan(
+			&admin.ID,
+			&admin.Email,
+			&admin.Firstname,
+			&admin.Middlename,
+			&admin.Lastname,
+			&admin.Blocked,
+			&admin.Role.ID,
+			&admin.RoleCode,
+			&admin.CreatedAt,
+			&admin.UpdatedAt,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		adminList = append(adminList, admin)
+	}
+
+	return adminList, nil
 }

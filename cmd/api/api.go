@@ -143,6 +143,13 @@ func (a *application) mount() http.Handler {
 				r.Post("/", a.createBursaryHandler)
 				r.Put("/", a.updateBursaryHandler)
 			})
+
+			r.Route("/user", func(r chi.Router) {
+				r.Use(a.JWTAuthMiddleware())
+				r.Get("/", a.getAdminUsersHandler)
+				// r.Post("/", a.createAdminUserHandler)
+				// r.Put("/", a.updateAdminUserHandler)
+			})
 		})
 
 		//Students

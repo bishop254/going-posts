@@ -73,6 +73,7 @@ type Storage struct {
 		Activate(context.Context, string) error
 		GetOneByEmail(context.Context, string) (*Admin, error)
 		GetOneByID(context.Context, int64) (*Admin, error)
+		GetAdminUsers(context.Context, *PaginatedAdminUserQuery) ([]Admin, error)
 	}
 
 	Bursaries interface {
