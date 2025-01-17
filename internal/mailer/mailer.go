@@ -3,9 +3,10 @@ package mailer
 import "embed"
 
 const (
-	UserWelcomeTemplate = "templates/activate_user_temp.tmpl"
-	maxRetries          = 3
-	fromUser            = "Eye Of"
+	UserWelcomeTemplate      = "templates/activate_user_temp.tmpl"
+	AdminUserWelcomeTemplate = "templates/activate_admin_user_temp.tmpl"
+	maxRetries               = 3
+	fromUser                 = "Eye Of"
 )
 
 //go:embed templates

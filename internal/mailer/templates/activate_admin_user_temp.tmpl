@@ -1,0 +1,12 @@
+{{define "subject"}} Finish Registrtaion with Going-Places {{end}}
+
+{{define "body"}}
+    <!DOCTYPE html>
+    <html>
+        <body>
+            Welcome {{ .Username }} to the Social platform, use this password to login ONLY AFTER ACTIVATION {{ .Pass }}
+            <br />
+            Here is the link to activate your account {{ .Link }}
+        </body>
+    </html>
+{{end}}

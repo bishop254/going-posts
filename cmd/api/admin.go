@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/bishop254/bursary/internal/mailer"
@@ -341,6 +342,83 @@ func (a *application) getRolesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := jsonResponse(w, http.StatusAccepted, adminUsersListing); err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+}
+
+type CreateAdminPayload struct {
+	Firstname  string  `json:"firstname" validate:"required"`
+	Middlename *string `json:"middlename"`
+	Lastname   string  `json:"lastname" validate:"required"`
+	Email      string  `json:"email" validate:"required,email"`
+	Role       int64   `json:"role" validate:"required"`
+	RoleCode   string  `json:"role_code" validate:"required"`
+}
+
+func (a *application) createAdminUserHandler(w http.ResponseWriter, r *http.Request) {
+	var payload CreateAdminPayload
+	if err := readJSON(w, r, &payload); err != nil {
+		a.badRequestError(w, r, err)
+		return
+	}
+
+	if err := Validate.Struct(payload); err != nil {
+		a.badRequestError(w, r, err)
+		return
+	}
+
+	admin := &store.Admin{
+		Firstname:  payload.Firstname,
+		Middlename: payload.Middlename,
+		Lastname:   payload.Lastname,
+		Email:      payload.Email,
+		Role: store.Role{
+			ID: payload.Role,
+		},
+		RoleCode: &payload.RoleCode,
+	}
+
+	genPass := strings.Split(uuid.New().String(), "-")[0]
+
+	if err := admin.Password.Hashing(genPass); err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+
+	ctx := r.Context()
+
+	plainToken := uuid.New().String()
+	hash := sha256.Sum256([]byte(plainToken))
+	hashToken := hex.EncodeToString(hash[:])
+
+	if err := a.store.Admins.RegisterAndInvite(ctx, admin, hashToken, time.Duration(a.config.mail.tokenExp)); err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+
+	hashLink := fmt.Sprintf("http://localhost:4300/auth/activate/%s", hashToken)
+
+	tmplVars := struct {
+		Username string
+		Link     string
+		Pass     string
+	}{
+		Username: admin.Firstname,
+		Link:     hashLink,
+		Pass:     genPass,
+	}
+
+	err := a.mailer.Send(mailer.AdminUserWelcomeTemplate, admin.Firstname, admin.Email, tmplVars)
+	if err != nil {
+		if err := a.store.Admins.RollBackNewAdmin(ctx, admin.ID, hashToken); err != nil {
+			a.internalServerError(w, r, err)
+		}
+		a.internalServerError(w, r, err)
+		return
+	}
+
+	if err := jsonResponse(w, http.StatusCreated, admin); err != nil {
 		a.internalServerError(w, r, err)
 		return
 	}

@@ -147,7 +147,7 @@ func (a *application) mount() http.Handler {
 			r.Route("/user", func(r chi.Router) {
 				r.Use(a.JWTAuthMiddleware())
 				r.Get("/", a.getAdminUsersHandler)
-				// r.Post("/", a.createAdminUserHandler)
+				r.Post("/", a.createAdminUserHandler)
 				// r.Put("/", a.updateAdminUserHandler)
 			})
 

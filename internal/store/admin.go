@@ -70,7 +70,7 @@ func (s *AdminsStore) Register(ctx context.Context, tx *sql.Tx, admin *Admin) er
 		false,
 		true,
 		false,
-		1,
+		admin.Role.ID,
 		admin.RoleCode,
 	).Scan(
 		&admin.ID,
@@ -320,7 +320,7 @@ func (s *AdminsStore) GetAdminUsers(ctx context.Context, pq *PaginatedAdminUserQ
 		SELECT 
 		 id, email, firstname, middlename, lastname, blocked,
 		 role_id, role_code, created_at, updated_at 
-		FROM system_users WHERE activated = true
+		FROM system_users
 	`
 
 	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
