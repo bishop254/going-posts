@@ -171,8 +171,35 @@ func (a *application) AuthorizationCheck(requiredRole string, next http.HandlerF
 
 		next.ServeHTTP(w, r)
 	})
-
 }
+
+// func (a *application) AdminUserAuthorizationCheck(requiredRole string, next http.HandlerFunc) http.HandlerFunc {
+// 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+// 		adminUser := getAdminUserFromCtx(r)
+// 		post := getPostFromCtx(r)
+
+// 		if post.UserID == user.ID {
+// 			next.ServeHTTP(w, r)
+// 			return
+// 		}
+
+// 		ctx := r.Context()
+
+// 		isAllowed, err := a.isUserAuthorized(ctx, user, requiredRole)
+// 		if err != nil {
+// 			a.internalServerError(w, r, err)
+// 			return
+// 		}
+
+// 		if !isAllowed {
+// 			a.forbiddenError(w, r, errors.New("not authorized to access this resource"))
+// 			return
+// 		}
+
+// 		next.ServeHTTP(w, r)
+// 	})
+// }
 
 func (a *application) isUserAuthorized(ctx context.Context, user *store.User, requiredRole string) (bool, error) {
 	requiredRoleData, err := a.store.Roles.GetOneByName(ctx, requiredRole)

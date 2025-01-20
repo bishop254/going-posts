@@ -285,23 +285,37 @@ func (s *AdminsStore) GetOneByEmail(ctx context.Context, email string) (*Admin, 
 
 func (s *AdminsStore) GetOneByID(ctx context.Context, adminID int64) (*Admin, error) {
 	query := `
-		SELECT id, email, firstname, password, blocked, role_id, role_code, created_at, updated_at FROM system_users WHERE id = $1 
+		SELECT system_users.id, system_users.email,
+		 system_users.firstname, system_users.password,
+		 system_users.blocked,
+		  system_users.role_code, 
+		  system_users.created_at, system_users.updated_at,
+		  roles.id, 
+		  roles.name, 
+		  roles.level
+		FROM system_users 
+		JOIN roles ON roles.id = system_users.role_id
+		WHERE system_users.id = $1
 	`
 
 	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
 	defer cancel()
 
 	admin := &Admin{}
+	rl := &Role{}
+
 	if err := s.db.QueryRowContext(ctx, query, adminID).Scan(
 		&admin.ID,
 		&admin.Email,
 		&admin.Firstname,
 		&admin.Password.hash,
 		&admin.Blocked,
-		&admin.Role.ID,
 		&admin.RoleCode,
 		&admin.CreatedAt,
 		&admin.UpdatedAt,
+		&rl.ID,
+		&rl.Name,
+		&rl.Level,
 	); err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows):
@@ -311,6 +325,8 @@ func (s *AdminsStore) GetOneByID(ctx context.Context, adminID int64) (*Admin, er
 		}
 	}
 
+	admin.Role = *rl
+
 	return admin, nil
 }
 
@@ -318,9 +334,17 @@ func (s *AdminsStore) GetAdminUsers(ctx context.Context, pq *PaginatedAdminUserQ
 	//TODO : add query parameters
 	query := `
 		SELECT 
-		 id, email, firstname, middlename, lastname, blocked,
-		 role_id, role_code, created_at, updated_at 
+		 system_users.id, system_users.email,
+		 system_users.firstname, system_users.middlename,
+		 system_users.lastname,
+		 system_users.blocked,
+		  system_users.role_code, 
+		  system_users.created_at, system_users.updated_at,
+		  roles.id, 
+		  roles.name, 
+		  roles.level
 		FROM system_users
+		JOIN roles ON roles.id = system_users.role_id
 	`
 
 	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
@@ -340,6 +364,7 @@ func (s *AdminsStore) GetAdminUsers(ctx context.Context, pq *PaginatedAdminUserQ
 	adminList := []Admin{}
 	for rows.Next() {
 		var admin Admin
+		var rl Role
 
 		err := rows.Scan(
 			&admin.ID,
@@ -348,16 +373,18 @@ func (s *AdminsStore) GetAdminUsers(ctx context.Context, pq *PaginatedAdminUserQ
 			&admin.Middlename,
 			&admin.Lastname,
 			&admin.Blocked,
-			&admin.Role.ID,
 			&admin.RoleCode,
 			&admin.CreatedAt,
 			&admin.UpdatedAt,
+			&rl.ID,
+			&rl.Name,
+			&rl.Level,
 		)
-
 		if err != nil {
 			return nil, err
 		}
 
+		admin.Role = rl
 		adminList = append(adminList, admin)
 	}
 

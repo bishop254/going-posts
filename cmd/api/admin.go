@@ -95,6 +95,11 @@ type RegisterAdminPayload struct {
 	RoleCode   string  `json:"role_code" validate:"required"`
 }
 
+func getAdminUserFromCtx(r *http.Request) *store.Admin {
+	user, _ := r.Context().Value(adminCtx).(*store.Admin)
+	return user
+}
+
 func (a *application) registerAdminHandler(w http.ResponseWriter, r *http.Request) {
 	var payload RegisterAdminPayload
 	if err := readJSON(w, r, &payload); err != nil {
