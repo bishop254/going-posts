@@ -75,8 +75,10 @@ type Storage struct {
 		GetAdminDataByID(context.Context, int64) (*Admin, error)
 		GetOneByID(context.Context, *sql.Tx, int64) (*Admin, error)
 		GetRoleByID(context.Context, *sql.Tx, int64) (*Role, error)
-		GetAdminUsers(context.Context, *PaginatedAdminUserQuery) ([]Admin, error)
+		GetAdminUsers(context.Context, *PaginatedAdminUserQuery, int64) ([]Admin, error)
 		GetRoles(context.Context, int64) ([]Role, error)
+
+		GetApplications(context.Context) ([]ApplicationWithMetadata, error)
 	}
 
 	Bursaries interface {

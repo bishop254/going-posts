@@ -44,6 +44,12 @@ type BursaryWithMetadata struct {
 	Application Application `json:"application"`
 }
 
+type ApplicationWithMetadata struct {
+	Bursary     Bursary     `json:"bursary"`
+	Application Application `json:"application"`
+	Student     Student     `json:"student"`
+}
+
 // TODO : add bursary count based on query, also fix query
 func (s *BursariesStore) GetBursariesAndCount(ctx context.Context, fq *PaginatedFeedQuery) (*BursariesWithMetadata, error) {
 	bursaryList := BursariesWithMetadata{}

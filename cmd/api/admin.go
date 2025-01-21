@@ -323,9 +323,10 @@ func (a *application) getAdminUsersHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	adminUser := getAdminUserFromCtx(r)
 	ctx := r.Context()
 
-	adminUsersListing, err := a.store.Admins.GetAdminUsers(ctx, adminUserQuery)
+	adminUsersListing, err := a.store.Admins.GetAdminUsers(ctx, adminUserQuery, int64(adminUser.Role.Level))
 	if err != nil {
 		a.internalServerError(w, r, err)
 		return
@@ -425,6 +426,39 @@ func (a *application) createAdminUserHandler(w http.ResponseWriter, r *http.Requ
 	}
 
 	if err := jsonResponse(w, http.StatusCreated, admin); err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+}
+
+func (a *application) getApplicationsHandler(w http.ResponseWriter, r *http.Request) {
+	// adminUserQuery := &store.PaginatedAdminUserQuery{
+	// 	Limit:  10,
+	// 	Offset: 10,
+	// 	Sort:   "desc",
+	// }
+
+	// adminUserQuery, err := adminUserQuery.ParseAdminUser(r)
+	// if err != nil {
+	// 	a.badRequestError(w, r, err)
+	// 	return
+	// }
+
+	// if err := Validate.Struct(adminUserQuery); err != nil {
+	// 	a.badRequestError(w, r, err)
+	// 	return
+	// }
+
+	// adminUser := getAdminUserFromCtx(r)
+	ctx := r.Context()
+
+	studAppls, err := a.store.Admins.GetApplications(ctx)
+	if err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+
+	if err := jsonResponse(w, http.StatusOK, studAppls); err != nil {
 		a.internalServerError(w, r, err)
 		return
 	}
