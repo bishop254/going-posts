@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -432,33 +433,37 @@ func (a *application) createAdminUserHandler(w http.ResponseWriter, r *http.Requ
 }
 
 func (a *application) getApplicationsHandler(w http.ResponseWriter, r *http.Request) {
-	// adminUserQuery := &store.PaginatedAdminUserQuery{
-	// 	Limit:  10,
-	// 	Offset: 10,
-	// 	Sort:   "desc",
-	// }
-
-	// adminUserQuery, err := adminUserQuery.ParseAdminUser(r)
-	// if err != nil {
-	// 	a.badRequestError(w, r, err)
-	// 	return
-	// }
-
-	// if err := Validate.Struct(adminUserQuery); err != nil {
-	// 	a.badRequestError(w, r, err)
-	// 	return
-	// }
-
-	// adminUser := getAdminUserFromCtx(r)
 	ctx := r.Context()
 
-	studAppls, err := a.store.Admins.GetApplications(ctx)
+	studAppls, err := a.store.Applications.GetApplications(ctx)
 	if err != nil {
 		a.internalServerError(w, r, err)
 		return
 	}
 
 	if err := jsonResponse(w, http.StatusOK, studAppls); err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+}
+
+func (a *application) getApplicationByIDHandler(w http.ResponseWriter, r *http.Request) {
+	applicationParam := chi.URLParam(r, "applicationID")
+	applicationID, err := strconv.Atoi(applicationParam)
+	if err != nil {
+		a.badRequestError(w, r, err)
+		return
+	}
+
+	ctx := r.Context()
+
+	applicationData, err := a.store.Applications.GetApplicationMetaDataByID(ctx, int64(applicationID))
+	if err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+
+	if err := jsonResponse(w, http.StatusOK, applicationData); err != nil {
 		a.internalServerError(w, r, err)
 		return
 	}

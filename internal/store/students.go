@@ -465,7 +465,15 @@ func (s *StudentsStore) GetStudentPersonalByID(ctx context.Context, studentID in
 func (s *StudentsStore) CreateStudentPersonal(ctx context.Context, payload StudentPersonal, studentID int64) error {
 	query := `
 		INSERT INTO students_personal(
-			dob, gender, citizenship, religion, parental_status, birth_cert_no, birth_town, birth_county, birth_sub_county, ward, voters_card_no, residence, id_number, phone, kra_pin_no, passport_no, special_need, special_needs_type, student_id
+			dob, gender, citizenship, 
+			religion, parental_status, 
+			birth_cert_no, birth_town, 
+			birth_county, birth_sub_county, 
+			ward, voters_card_no, residence, 
+			id_number, phone, kra_pin_no, 
+			passport_no, special_need, 
+			special_needs_type, 
+			student_id
 		)
 		VALUES (
 			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19

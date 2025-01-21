@@ -77,8 +77,6 @@ type Storage struct {
 		GetRoleByID(context.Context, *sql.Tx, int64) (*Role, error)
 		GetAdminUsers(context.Context, *PaginatedAdminUserQuery, int64) ([]Admin, error)
 		GetRoles(context.Context, int64) ([]Role, error)
-
-		GetApplications(context.Context) ([]ApplicationWithMetadata, error)
 	}
 
 	Bursaries interface {
@@ -90,17 +88,23 @@ type Storage struct {
 		CreateBursary(context.Context, Bursary) error
 		UpdateBursary(context.Context, Bursary) error
 	}
+
+	Applications interface {
+		GetApplications(context.Context) ([]ApplicationWithMetadata, error)
+		GetApplicationMetaDataByID(context.Context, int64) (*ApplicationWithMetadata, error)
+	}
 }
 
 func NewStorage(db *sql.DB) Storage {
 	return Storage{
-		Posts:     &PostStore{db},
-		Users:     &UserStore{db},
-		Comments:  &CommentStore{db},
-		Roles:     &RolesStore{db},
-		Students:  &StudentsStore{db},
-		Admins:    &AdminsStore{db},
-		Bursaries: &BursariesStore{db},
+		Posts:        &PostStore{db},
+		Users:        &UserStore{db},
+		Comments:     &CommentStore{db},
+		Roles:        &RolesStore{db},
+		Students:     &StudentsStore{db},
+		Admins:       &AdminsStore{db},
+		Bursaries:    &BursariesStore{db},
+		Applications: &ApplicationsStore{db},
 	}
 }
 
