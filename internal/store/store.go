@@ -72,9 +72,11 @@ type Storage struct {
 		RollBackNewAdmin(context.Context, int64, string) error
 		Activate(context.Context, string) error
 		GetOneByEmail(context.Context, string) (*Admin, error)
-		GetOneByID(context.Context, int64) (*Admin, error)
+		GetAdminDataByID(context.Context, int64) (*Admin, error)
+		GetOneByID(context.Context, *sql.Tx, int64) (*Admin, error)
+		GetRoleByID(context.Context, *sql.Tx, int64) (*Role, error)
 		GetAdminUsers(context.Context, *PaginatedAdminUserQuery) ([]Admin, error)
-		GetRoles(context.Context) ([]Role, error)
+		GetRoles(context.Context, int64) ([]Role, error)
 	}
 
 	Bursaries interface {

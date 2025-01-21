@@ -338,9 +338,10 @@ func (a *application) getAdminUsersHandler(w http.ResponseWriter, r *http.Reques
 }
 
 func (a *application) getRolesHandler(w http.ResponseWriter, r *http.Request) {
+	adminUser := getAdminUserFromCtx(r)
 	ctx := r.Context()
 
-	adminUsersListing, err := a.store.Admins.GetRoles(ctx)
+	adminUsersListing, err := a.store.Admins.GetRoles(ctx, int64(adminUser.Role.Level))
 	if err != nil {
 		a.internalServerError(w, r, err)
 		return

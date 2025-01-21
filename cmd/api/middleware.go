@@ -47,7 +47,7 @@ func (a *application) JWTAuthMiddleware() func(http.Handler) http.Handler {
 
 			ctx := r.Context()
 
-			admin, err := a.store.Admins.GetOneByID(ctx, adminID)
+			admin, err := a.store.Admins.GetAdminDataByID(ctx, adminID)
 			if err != nil {
 				a.unauthorizedError(w, r, err)
 				return

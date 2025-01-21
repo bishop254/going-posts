@@ -283,7 +283,35 @@ func (s *AdminsStore) GetOneByEmail(ctx context.Context, email string) (*Admin, 
 	return admin, nil
 }
 
-func (s *AdminsStore) GetOneByID(ctx context.Context, adminID int64) (*Admin, error) {
+func (s *AdminsStore) GetAdminDataByID(ctx context.Context, adminID int64) (*Admin, error) {
+	adminUser := Admin{}
+
+	err := withTx(s.db, ctx, func(tx *sql.Tx) error {
+		adminData, err := s.GetOneByID(ctx, tx, adminID)
+		if err != nil {
+			return err
+		}
+
+		roleData, err := s.GetRoleByID(ctx, tx, adminData.Role.ID)
+		if err != nil {
+			return err
+		}
+
+		adminUser = *adminData
+		adminUser.Role = *roleData
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &adminUser, err
+
+}
+
+func (s *AdminsStore) GetOneByID(ctx context.Context, tx *sql.Tx, adminID int64) (*Admin, error) {
 	query := `
 		SELECT system_users.id, system_users.email,
 		 system_users.firstname, system_users.password,
@@ -330,7 +358,7 @@ func (s *AdminsStore) GetOneByID(ctx context.Context, adminID int64) (*Admin, er
 	return admin, nil
 }
 
-func (s *AdminsStore) GetAdminUsers(ctx context.Context, pq *PaginatedAdminUserQuery) ([]Admin, error) {
+func (s *AdminsStore) GetAdminUsers(ctx context.Context, pq *PaginatedAdminUserQuery, level int64) ([]Admin, error) {
 	//TODO : add query parameters
 	query := `
 		SELECT 
@@ -345,12 +373,13 @@ func (s *AdminsStore) GetAdminUsers(ctx context.Context, pq *PaginatedAdminUserQ
 		  roles.level
 		FROM system_users
 		JOIN roles ON roles.id = system_users.role_id
+		WHERE roles.level <= $1
 	`
 
 	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
 	defer cancel()
 
-	rows, err := s.db.QueryContext(ctx, query)
+	rows, err := s.db.QueryContext(ctx, query, level)
 	if err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows):
@@ -391,17 +420,22 @@ func (s *AdminsStore) GetAdminUsers(ctx context.Context, pq *PaginatedAdminUserQ
 	return adminList, nil
 }
 
-func (s *AdminsStore) GetRoles(ctx context.Context) ([]Role, error) {
+func (s *AdminsStore) GetRoles(ctx context.Context, level int64) ([]Role, error) {
 	//TODO : add query parameters
+	fmt.Println(level)
+	fmt.Print(level)
+	fmt.Print(level)
+	fmt.Print(level)
+	fmt.Println(level)
 	query := `
 		SELECT id, name, description, level 
-		FROM roles
+		FROM roles where level < $1
 	`
 
 	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
 	defer cancel()
 
-	rows, err := s.db.QueryContext(ctx, query)
+	rows, err := s.db.QueryContext(ctx, query, level)
 	if err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows):
@@ -431,4 +465,33 @@ func (s *AdminsStore) GetRoles(ctx context.Context) ([]Role, error) {
 	}
 
 	return roleList, nil
+}
+
+func (s *AdminsStore) GetRoleByID(ctx context.Context, tx *sql.Tx, roleID int64) (*Role, error) {
+	//TODO : add query parameters
+	query := `
+		SELECT id, name, description, level 
+		FROM roles where id = $1
+	`
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
+	defer cancel()
+
+	rl := &Role{}
+	err := s.db.QueryRowContext(ctx, query, roleID).Scan(
+		&rl.ID,
+		&rl.Name,
+		&rl.Description,
+		&rl.Level,
+	)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return nil, errors.New("role not found")
+		default:
+			return nil, err
+		}
+	}
+
+	return rl, nil
 }
