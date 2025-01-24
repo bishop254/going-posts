@@ -406,6 +406,9 @@ func (a *application) createAdminUserHandler(w http.ResponseWriter, r *http.Requ
 	}
 
 	hashLink := fmt.Sprintf("http://localhost:4300/auth/activate/%s", hashToken)
+	fmt.Println()
+	fmt.Println(genPass)
+	fmt.Println()
 
 	tmplVars := struct {
 		Username string
@@ -433,12 +436,47 @@ func (a *application) createAdminUserHandler(w http.ResponseWriter, r *http.Requ
 }
 
 func (a *application) getApplicationsHandler(w http.ResponseWriter, r *http.Request) {
+	adminUser := getAdminUserFromCtx(r)
 	ctx := r.Context()
+	studAppls := []store.ApplicationWithMetadata{}
 
-	studAppls, err := a.store.Applications.GetApplications(ctx)
-	if err != nil {
-		a.internalServerError(w, r, err)
-		return
+	fmt.Println()
+	fmt.Println(adminUser.Role.Name)
+	fmt.Println()
+	switch adminUser.Role.Name {
+	case "ward":
+		wardApplications, err := a.store.Applications.GetApplications(ctx, "applications", "submitted")
+		if err != nil {
+			a.internalServerError(w, r, err)
+			return
+		}
+
+		studAppls = wardApplications
+	case "county":
+		countyApplications, err := a.store.Applications.GetApplications(ctx, "applications", "county")
+		if err != nil {
+			a.internalServerError(w, r, err)
+			return
+		}
+
+		studAppls = countyApplications
+	case "finance-assistant":
+		ministryApplications, err := a.store.Applications.GetApplications(ctx, "applications", "ministry")
+		if err != nil {
+			a.internalServerError(w, r, err)
+			return
+		}
+		studAppls = append(studAppls, ministryApplications...)
+	case "finance":
+		financeAssisApplications, err := a.store.Applications.GetApplications(ctx, "applications", "finance")
+		if err != nil {
+			a.internalServerError(w, r, err)
+			return
+		}
+		studAppls = append(studAppls, financeAssisApplications...)
+
+	default:
+		break
 	}
 
 	if err := jsonResponse(w, http.StatusOK, studAppls); err != nil {
@@ -456,14 +494,84 @@ func (a *application) getApplicationByIDHandler(w http.ResponseWriter, r *http.R
 	}
 
 	ctx := r.Context()
+	studAppl := &store.ApplicationWithMetadata{}
 
-	applicationData, err := a.store.Applications.GetApplicationMetaDataByID(ctx, int64(applicationID))
+	applicationData, err := a.store.Applications.GetApplicationMetaDataByID(ctx, "applications", int64(applicationID))
 	if err != nil {
 		a.internalServerError(w, r, err)
 		return
 	}
+	studAppl = applicationData
 
-	if err := jsonResponse(w, http.StatusOK, applicationData); err != nil {
+	if err := jsonResponse(w, http.StatusOK, studAppl); err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+}
+
+type ApproveApplicationPayload struct {
+	ID int64 `json:"id" validate:"required"`
+}
+
+type RejectApplicationPayload struct {
+	ID      int64   `json:"id" validate:"required"`
+	Remarks *string `json:"remarks" validate:"omitempty"`
+}
+
+func (a *application) approveApplicationsHandler(w http.ResponseWriter, r *http.Request) {
+	adminUser := getAdminUserFromCtx(r)
+
+	var payload ApproveApplicationPayload
+	if err := readJSON(w, r, &payload); err != nil {
+		a.badRequestError(w, r, err)
+		return
+	}
+
+	if err := Validate.Struct(payload); err != nil {
+		a.badRequestError(w, r, err)
+		return
+	}
+
+	ctx := r.Context()
+
+	switch adminUser.Role.Name {
+	case "ward":
+		err := a.store.Applications.ApproveApplicationByID(ctx, "county", payload.ID)
+		if err != nil {
+			a.internalServerError(w, r, err)
+			return
+		}
+	case "county":
+		err := a.store.Applications.ApproveApplicationByID(ctx, "ministry", payload.ID)
+		if err != nil {
+			a.internalServerError(w, r, err)
+			return
+		}
+	case "finance-assistant":
+		err := a.store.Applications.ApproveApplicationByID(ctx, "finance", payload.ID)
+		if err != nil {
+			a.internalServerError(w, r, err)
+			return
+		}
+	case "finance":
+		err := a.store.Applications.ApproveApplicationByID(ctx, "disbursed", payload.ID)
+		if err != nil {
+			a.internalServerError(w, r, err)
+			return
+		}
+	default:
+		a.forbiddenError(w, r, errors.New("authorization error"))
+		return
+
+	}
+
+	apiResp := struct {
+		Message string `json:"message"`
+	}{
+		Message: "Application approved",
+	}
+
+	if err := jsonResponse(w, http.StatusAccepted, apiResp); err != nil {
 		a.internalServerError(w, r, err)
 		return
 	}

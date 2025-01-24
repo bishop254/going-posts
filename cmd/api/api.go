@@ -148,7 +148,7 @@ func (a *application) mount() http.Handler {
 				r.Use(a.JWTAuthMiddleware())
 				r.Get("/", a.getApplicationsHandler)
 				r.Get("/{applicationID}", a.getApplicationByIDHandler)
-				// r.Put("/", a.updateBursaryHandler)
+				r.Put("/approve", a.approveApplicationsHandler)
 			})
 
 			r.Route("/user", func(r chi.Router) {

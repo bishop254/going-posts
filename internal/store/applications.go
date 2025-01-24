@@ -3,6 +3,8 @@ package store
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"fmt"
 	"time"
 )
 
@@ -10,32 +12,45 @@ type ApplicationsStore struct {
 	db *sql.DB
 }
 
-func (s *ApplicationsStore) GetApplications(ctx context.Context) ([]ApplicationWithMetadata, error) {
-	query := `
-	SELECT 		 
-		applications.id,
-		applications.bursary_id, applications.student_id, 
-		applications.stage, applications.remarks, 
-		applications.soft_delete, applications.created_at, 
-		applications.updated_at,
-		bursaries.id,
-		bursaries.bursary_name,
-		bursaries.end_date,
-        students.firstname,
-        students.lastname,
-        students_personal.gender,
-        students_personal.phone,
-        students_personal.birth_sub_county,
-        students_personal.ward,
-        students_institution.inst_name,
-        students_institution.adm_no
- 	FROM applications
-    LEFT JOIN students ON students.id = applications.student_id
-    LEFT JOIN students_personal ON students_personal.student_id = applications.student_id
-    LEFT JOIN students_institution ON students_institution.student_id = applications.student_id
-	JOIN bursaries ON bursaries.id = applications.bursary_id
-	WHERE applications.soft_delete = false;
-	`
+func (s *ApplicationsStore) GetApplications(ctx context.Context, tableName string, stage string) ([]ApplicationWithMetadata, error) {
+	allowedTables := map[string]bool{
+		"applications":             true,
+		"county_applications":      true,
+		"min_finance_applications": true,
+	}
+
+	if !allowedTables[tableName] {
+		return nil, errors.New("invalid table name")
+	}
+
+	query := fmt.Sprintf(`
+		SELECT 		 
+			app.id,
+			app.bursary_id,
+			app.student_id, 
+			app.stage,
+			app.remarks, 
+			app.soft_delete,
+			app.created_at, 
+			app.updated_at,
+			bursaries.id AS bursary_id,
+			bursaries.bursary_name,
+			bursaries.end_date,
+			students.firstname,
+			students.lastname,
+			students_personal.gender,
+			students_personal.phone,
+			students_personal.birth_sub_county,
+			students_personal.ward,
+			students_institution.inst_name,
+			students_institution.adm_no
+		FROM %s AS app
+		LEFT JOIN students ON students.id = app.student_id
+		LEFT JOIN students_personal ON students_personal.student_id = app.student_id
+		LEFT JOIN students_institution ON students_institution.student_id = app.student_id
+		JOIN bursaries ON bursaries.id = app.bursary_id
+		WHERE app.soft_delete = false AND app.stage = $1 ;
+	`, tableName)
 
 	ctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
@@ -45,6 +60,7 @@ func (s *ApplicationsStore) GetApplications(ctx context.Context) ([]ApplicationW
 	rows, err := s.db.QueryContext(
 		ctx,
 		query,
+		stage,
 	)
 	if err != nil {
 		return nil, err
@@ -98,56 +114,116 @@ func (s *ApplicationsStore) GetApplications(ctx context.Context) ([]ApplicationW
 	return applicationData, nil
 }
 
-func (s *ApplicationsStore) GetApplicationMetaDataByID(ctx context.Context, applicationID int64) (*ApplicationWithMetadata, error) {
-	query := `
-	SELECT 		 
-		applications.id,
-		applications.bursary_id,
-		applications.student_id, 
-		applications.stage,
-		applications.remarks, 
-		applications.soft_delete,
-		applications.created_at, 
-		applications.updated_at,
-		bursaries.id,
-		bursaries.bursary_name,
-		bursaries.description, 
-		bursaries.end_date,
-		bursaries.amount_allocated, 
-		bursaries.amount_per_student, 
-		bursaries.allocation_type, 
-		bursaries.created_at,
-        students.firstname,
-        students.middlename,
-        students.lastname,
-        students.email,
-        students_personal.dob,
-        students_personal.gender,
-        students_personal.parental_status,
-        students_personal.birth_sub_county,
-        students_personal.ward,
-        students_personal.residence,
-        students_personal.phone,
-        students_personal.id_number,
-        students_personal.special_need,
-        students_institution.inst_name,
-        students_institution.inst_type,
-        students_institution.category,
-        students_institution.inst_county,
-        students_institution.inst_sub_county,
-        students_institution.inst_ward,
-        students_institution.adm_no,
-        students_institution.bank_name,
-        students_institution.bank_branch,
-        students_institution.bank_acc_name,
-        students_institution.bank_acc_no
- 	FROM applications
-    LEFT JOIN students ON students.id = applications.student_id
-    LEFT JOIN students_personal ON students_personal.student_id = applications.student_id
-    LEFT JOIN students_institution ON students_institution.student_id = applications.student_id
-	LEFT JOIN bursaries ON bursaries.id = applications.bursary_id
-	WHERE applications.soft_delete = false AND applications.id = $1;
-	`
+func (s *ApplicationsStore) GetApplicationMetaDataByID(ctx context.Context, tableName string, applicationID int64) (*ApplicationWithMetadata, error) {
+	allowedTables := map[string]bool{
+		"applications":             true,
+		"county_applications":      true,
+		"min_finance_applications": true,
+	}
+
+	if !allowedTables[tableName] {
+		return nil, errors.New("invalid table name")
+	}
+
+	query := fmt.Sprintf(`
+		SELECT 		 
+			app.id,
+			app.bursary_id,
+			app.student_id, 
+			app.stage,
+			app.remarks, 
+			app.soft_delete,
+			app.created_at, 
+			app.updated_at,
+			bursaries.id AS bursary_id,
+			bursaries.bursary_name,
+			bursaries.description, 
+			bursaries.end_date,
+			bursaries.amount_allocated, 
+			bursaries.amount_per_student, 
+			bursaries.allocation_type, 
+			bursaries.created_at AS bursary_created_at,
+			students.firstname,
+			students.middlename,
+			students.lastname,
+			students.email,
+			students_personal.dob,
+			students_personal.gender,
+			students_personal.parental_status,
+			students_personal.birth_sub_county,
+			students_personal.ward,
+			students_personal.residence,
+			students_personal.phone,
+			students_personal.id_number,
+			students_personal.special_need,
+			students_institution.inst_name,
+			students_institution.inst_type,
+			students_institution.category,
+			students_institution.inst_county,
+			students_institution.inst_sub_county,
+			students_institution.inst_ward,
+			students_institution.adm_no,
+			students_institution.bank_name,
+			students_institution.bank_branch,
+			students_institution.bank_acc_name,
+			students_institution.bank_acc_no
+		FROM %s AS app
+		LEFT JOIN students ON students.id = app.student_id
+		LEFT JOIN students_personal ON students_personal.student_id = app.student_id
+		LEFT JOIN students_institution ON students_institution.student_id = app.student_id
+		LEFT JOIN bursaries ON bursaries.id = app.bursary_id
+		WHERE app.soft_delete = false AND app.id = $1;
+	`, tableName)
+
+	// query := `
+	// SELECT
+	// 	applications.id,
+	// 	applications.bursary_id,
+	// 	applications.student_id,
+	// 	applications.stage,
+	// 	applications.remarks,
+	// 	applications.soft_delete,
+	// 	applications.created_at,
+	// 	applications.updated_at,
+	// 	bursaries.id,
+	// 	bursaries.bursary_name,
+	// 	bursaries.description,
+	// 	bursaries.end_date,
+	// 	bursaries.amount_allocated,
+	// 	bursaries.amount_per_student,
+	// 	bursaries.allocation_type,
+	// 	bursaries.created_at,
+	//     students.firstname,
+	//     students.middlename,
+	//     students.lastname,
+	//     students.email,
+	//     students_personal.dob,
+	//     students_personal.gender,
+	//     students_personal.parental_status,
+	//     students_personal.birth_sub_county,
+	//     students_personal.ward,
+	//     students_personal.residence,
+	//     students_personal.phone,
+	//     students_personal.id_number,
+	//     students_personal.special_need,
+	//     students_institution.inst_name,
+	//     students_institution.inst_type,
+	//     students_institution.category,
+	//     students_institution.inst_county,
+	//     students_institution.inst_sub_county,
+	//     students_institution.inst_ward,
+	//     students_institution.adm_no,
+	//     students_institution.bank_name,
+	//     students_institution.bank_branch,
+	//     students_institution.bank_acc_name,
+	//     students_institution.bank_acc_no
+	// FROM applications
+	// LEFT JOIN students ON students.id = applications.student_id
+	// LEFT JOIN students_personal ON students_personal.student_id = applications.student_id
+	// LEFT JOIN students_institution ON students_institution.student_id = applications.student_id
+	// LEFT JOIN bursaries ON bursaries.id = applications.bursary_id
+	// WHERE applications.soft_delete = false AND applications.id = $1;
+	// `
 
 	ctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
@@ -216,4 +292,27 @@ func (s *ApplicationsStore) GetApplicationMetaDataByID(ctx context.Context, appl
 	applicationData.Student = stud
 
 	return applicationData, nil
+}
+
+func (s *ApplicationsStore) ApproveApplicationByID(ctx context.Context, stage string, applicationID int64) error {
+
+	query := `
+	UPDATE applications
+	SET stage = $1
+	WHERE id = $2;
+	`
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
+
+	if _, err := s.db.ExecContext(
+		ctx,
+		query,
+		stage,
+		applicationID,
+	); err != nil {
+		return err
+	}
+
+	return nil
 }

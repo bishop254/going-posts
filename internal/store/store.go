@@ -90,8 +90,9 @@ type Storage struct {
 	}
 
 	Applications interface {
-		GetApplications(context.Context) ([]ApplicationWithMetadata, error)
-		GetApplicationMetaDataByID(context.Context, int64) (*ApplicationWithMetadata, error)
+		GetApplications(context.Context, string, string) ([]ApplicationWithMetadata, error)
+		GetApplicationMetaDataByID(context.Context, string, int64) (*ApplicationWithMetadata, error)
+		ApproveApplicationByID(context.Context, string, int64) error
 	}
 }
 
