@@ -256,7 +256,7 @@ func (s *AdminsStore) updateAdmin(ctx context.Context, tx *sql.Tx, adminID int64
 
 func (s *AdminsStore) GetOneByEmail(ctx context.Context, email string) (*Admin, error) {
 	query := `
-		SELECT id, email, firstname, password, blocked, created_at, updated_at FROM system_users WHERE email = $1 
+		SELECT id, email, firstname, role_code, password, blocked, created_at, updated_at FROM system_users WHERE email = $1 
 	`
 
 	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
@@ -267,6 +267,7 @@ func (s *AdminsStore) GetOneByEmail(ctx context.Context, email string) (*Admin, 
 		&admin.ID,
 		&admin.Email,
 		&admin.Firstname,
+		&admin.RoleCode,
 		&admin.Password.hash,
 		&admin.Blocked,
 		&admin.CreatedAt,

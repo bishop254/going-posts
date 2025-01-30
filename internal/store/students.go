@@ -23,6 +23,10 @@ type Student struct {
 	Role           Role     `json:"role"`
 	Personal       StudentPersonal
 	Institution    StudentInstitution
+	Guardians      []StudentGuardian
+	Sponsor        StudentSponsor
+	Emergency      StudentEmergency
+	Applications   []BursaryWithMetadata
 }
 
 type StudentPersonal struct {
@@ -418,6 +422,77 @@ func (s *StudentsStore) GetOneByID(ctx context.Context, studentID int64) (*Stude
 	}
 
 	return student, nil
+}
+
+func (s *StudentsStore) GetAll(ctx context.Context) ([]Student, error) {
+	query := `
+	SELECT 
+		students.id,
+		students.email,
+		students.firstname,
+		students.lastname,
+		students.blocked,
+		students.activated,
+		students.created_at,
+		students_personal.gender,
+		students_personal.phone,
+		students_personal.id_number,
+		students_personal.birth_sub_county,
+		students_personal.ward,
+		students_institution.inst_name,
+		students_institution.adm_no
+	FROM students
+	LEFT JOIN students_personal ON 
+		students_personal.student_id = students.id
+	LEFT JOIN students_institution ON 
+		students_institution.student_id = students.id;
+	`
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
+	defer cancel()
+
+	rows, err := s.db.QueryContext(ctx, query)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return nil, errors.New("students not found")
+		default:
+			return nil, err
+		}
+	}
+	defer rows.Close()
+
+	students := []Student{}
+	for rows.Next() {
+		student := &Student{}
+		studentPersonal := &StudentPersonal{}
+		studentInst := &StudentInstitution{}
+
+		err := rows.Scan(
+			&student.ID,
+			&student.Email,
+			&student.Firstname,
+			&student.Lastname,
+			&student.Blocked,
+			&student.Activated,
+			&student.CreatedAt,
+			&studentPersonal.Gender,
+			&studentPersonal.Phone,
+			&studentPersonal.IDNumber,
+			&studentPersonal.BirthSubCounty,
+			&studentPersonal.Ward,
+			&studentInst.InstName,
+			&studentInst.AdmNo,
+		)
+		if err != nil {
+			return nil, err
+		}
+		student.Personal = *studentPersonal
+		student.Institution = *studentInst
+		students = append(students, *student)
+	}
+
+	return students, nil
 }
 
 func (s *StudentsStore) GetStudentPersonalByID(ctx context.Context, studentID int64) (*StudentPersonal, error) {

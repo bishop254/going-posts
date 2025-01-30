@@ -147,8 +147,10 @@ func (a *application) mount() http.Handler {
 			r.Route("/applications", func(r chi.Router) {
 				r.Use(a.JWTAuthMiddleware())
 				r.Get("/", a.getApplicationsHandler)
+				r.Get("/all", a.getAllApplicationsHandler)
 				r.Get("/{applicationID}", a.getApplicationByIDHandler)
 				r.Put("/approve", a.approveApplicationsHandler)
+				r.Put("/bulk", a.bulkApproveApplicationsHandler)
 			})
 
 			r.Route("/user", func(r chi.Router) {
@@ -161,6 +163,12 @@ func (a *application) mount() http.Handler {
 			r.Route("/roles", func(r chi.Router) {
 				r.Use(a.JWTAuthMiddleware())
 				r.Get("/", a.getRolesHandler)
+			})
+
+			r.Route("/students", func(r chi.Router) {
+				r.Use(a.JWTAuthMiddleware())
+				r.Get("/", a.getAllStudentsHandler)
+				r.Get("/{studentId}", a.getStudentDataHandler)
 			})
 		})
 

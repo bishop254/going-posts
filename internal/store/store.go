@@ -40,6 +40,7 @@ type Storage struct {
 		Activate(context.Context, string) error
 		GetOneByEmail(context.Context, string) (*Student, error)
 		GetOneByID(context.Context, int64) (*Student, error)
+		GetAll(context.Context) ([]Student, error)
 
 		GetStudentPersonalByID(context.Context, int64) (*StudentPersonal, error)
 		CreateStudentPersonal(context.Context, StudentPersonal, int64) error
@@ -91,8 +92,10 @@ type Storage struct {
 
 	Applications interface {
 		GetApplications(context.Context, string, string) ([]ApplicationWithMetadata, error)
+		GetAllApplications(context.Context) ([]ApplicationWithMetadata, error)
 		GetApplicationMetaDataByID(context.Context, string, int64) (*ApplicationWithMetadata, error)
 		ApproveApplicationByID(context.Context, string, int64) error
+		ApproveBulkApplications(context.Context, string, []int64) error
 	}
 }
 

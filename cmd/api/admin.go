@@ -67,6 +67,7 @@ func (a *application) loginAdminHandler(w http.ResponseWriter, r *http.Request) 
 	loginResp := struct {
 		Token     string `json:"token"`
 		Firstname string `json:"firstname"`
+		Role      string `json:"role_code"`
 		Email     string `json:"email"`
 		UID       int64  `json:"uid"`
 		Blocked   bool   `json:"blocked"`
@@ -74,6 +75,7 @@ func (a *application) loginAdminHandler(w http.ResponseWriter, r *http.Request) 
 	}{
 		Token:     token,
 		Firstname: admin.Firstname,
+		Role:      *admin.RoleCode,
 		Email:     admin.Email,
 		UID:       admin.ID,
 		Blocked:   admin.Blocked,
@@ -450,8 +452,21 @@ func (a *application) getApplicationsHandler(w http.ResponseWriter, r *http.Requ
 			a.internalServerError(w, r, err)
 			return
 		}
+		for _, appl := range wardApplications {
+			roleParts := strings.Split(*adminUser.RoleCode, ":")
+			if len(roleParts) < 2 {
+				fmt.Println("Invalid RoleCode format for ward user")
+				continue
+			}
 
-		studAppls = wardApplications
+			subCounty := roleParts[0]
+			ward := roleParts[1]
+
+			if appl.Student.Personal.BirthSubCounty == subCounty && appl.Student.Personal.Ward == ward {
+				studAppls = append(studAppls, appl)
+			}
+		}
+
 	case "county":
 		countyApplications, err := a.store.Applications.GetApplications(ctx, "applications", "county")
 		if err != nil {
@@ -478,6 +493,24 @@ func (a *application) getApplicationsHandler(w http.ResponseWriter, r *http.Requ
 	default:
 		break
 	}
+
+	if err := jsonResponse(w, http.StatusOK, studAppls); err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+}
+
+func (a *application) getAllApplicationsHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	studAppls := []store.ApplicationWithMetadata{}
+
+	allApplications, err := a.store.Applications.GetAllApplications(ctx)
+	if err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+
+	studAppls = append(studAppls, allApplications...)
 
 	if err := jsonResponse(w, http.StatusOK, studAppls); err != nil {
 		a.internalServerError(w, r, err)
@@ -572,6 +605,148 @@ func (a *application) approveApplicationsHandler(w http.ResponseWriter, r *http.
 	}
 
 	if err := jsonResponse(w, http.StatusAccepted, apiResp); err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+}
+
+type BulkApproveApplicationsPayload struct {
+	Appls []int64 `json:"appls" validate:"required"`
+}
+
+func (a *application) bulkApproveApplicationsHandler(w http.ResponseWriter, r *http.Request) {
+	adminUser := getAdminUserFromCtx(r)
+
+	var payload BulkApproveApplicationsPayload
+	if err := readJSON(w, r, &payload); err != nil {
+		a.badRequestError(w, r, err)
+		return
+	}
+
+	if err := Validate.Struct(payload); err != nil {
+		a.badRequestError(w, r, err)
+		return
+	}
+
+	ctx := r.Context()
+
+	switch adminUser.Role.Name {
+	case "ward":
+		err := a.store.Applications.ApproveBulkApplications(ctx, "county", payload.Appls)
+		if err != nil {
+			a.internalServerError(w, r, err)
+			return
+		}
+	case "county":
+		err := a.store.Applications.ApproveBulkApplications(ctx, "ministry", payload.Appls)
+		if err != nil {
+			a.internalServerError(w, r, err)
+			return
+		}
+	case "finance-assistant":
+		err := a.store.Applications.ApproveBulkApplications(ctx, "finance", payload.Appls)
+		if err != nil {
+			a.internalServerError(w, r, err)
+			return
+		}
+	case "finance":
+		err := a.store.Applications.ApproveBulkApplications(ctx, "disbursed", payload.Appls)
+		if err != nil {
+			a.internalServerError(w, r, err)
+			return
+		}
+	default:
+		a.forbiddenError(w, r, errors.New("authorization error"))
+		return
+
+	}
+
+	apiResp := struct {
+		Message string `json:"message"`
+	}{
+		Message: "Applications approved",
+	}
+
+	if err := jsonResponse(w, http.StatusAccepted, apiResp); err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+}
+
+func (a *application) getAllStudentsHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	students, err := a.store.Students.GetAll(ctx)
+	if err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+
+	if err := jsonResponse(w, http.StatusOK, students); err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+}
+
+func (a *application) getStudentDataHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	idParam := chi.URLParam(r, "studentId")
+	studentId, err := strconv.ParseInt(idParam, 10, 64)
+	if err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+
+	student, err := a.store.Students.GetOneByID(ctx, studentId)
+	if err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+
+	personal, err := a.store.Students.GetStudentPersonalByID(ctx, studentId)
+	if err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+	student.Personal = *personal
+
+	institution, err := a.store.Students.GetStudentInstitutionByID(ctx, studentId)
+	if err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+	student.Institution = *institution
+
+	guardians, err := a.store.Students.GetStudentGuardiansByID(ctx, studentId)
+	if err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+	student.Guardians = guardians
+
+	sponsor, err := a.store.Students.GetStudentSponsorByID(ctx, studentId)
+	if err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+	student.Sponsor = *sponsor
+
+	emergency, err := a.store.Students.GetStudentEmergencyByID(ctx, studentId)
+	if err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+	student.Emergency = *emergency
+
+	applications, err := a.store.Students.GetStudentApplications(ctx, studentId)
+	if err != nil {
+		a.internalServerError(w, r, err)
+		return
+	}
+	student.Applications = applications
+
+	if err := jsonResponse(w, http.StatusOK, student); err != nil {
 		a.internalServerError(w, r, err)
 		return
 	}
